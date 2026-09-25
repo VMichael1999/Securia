@@ -102,18 +102,18 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
             children: [
               const SizedBox(height: 20),
 
-              // Logo e Iconografía Táctica
+              // Logo e Iconografía Táctica Institucional
               Center(
                 child: Container(
                   width: 76,
                   height: 76,
                   decoration: BoxDecoration(
-                    color: PatrolColors.tacticalNavy,
+                    color: PatrolColors.policeBlue,
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: PatrolColors.cyanAccent, width: 2),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: PatrolColors.cyanAccent.withValues(alpha: 0.35),
+                        color: PatrolColors.policeBlue.withValues(alpha: 0.4),
                         blurRadius: 18,
                         spreadRadius: 2,
                       ),
@@ -122,7 +122,7 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
                   child: const Center(
                     child: Icon(
                       Icons.local_police_rounded,
-                      color: PatrolColors.cyanAccent,
+                      color: Colors.white,
                       size: 42,
                     ),
                   ),
@@ -139,7 +139,7 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
                       style: PatrolTypography.titleLarge.copyWith(
                         fontSize: 24,
                         letterSpacing: 1.5,
-                        color: Colors.white,
+                        color: PatrolColors.policeBlue,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -175,7 +175,7 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
                     value: _selectedUnit,
                     isExpanded: true,
                     dropdownColor: PatrolColors.surfaceCard,
-                    icon: const Icon(Icons.arrow_drop_down, color: PatrolColors.cyanAccent),
+                    icon: const Icon(Icons.arrow_drop_down, color: PatrolColors.policeAccent),
                     items: _availableUnits.map((unit) {
                       return DropdownMenuItem<PatrolUnitModel>(
                         value: unit,
@@ -184,13 +184,16 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: PatrolColors.tacticalNavy,
+                                color: PatrolColors.surfaceElevated,
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: PatrolColors.cyanAccent),
+                                border: Border.all(color: PatrolColors.policeAccent),
                               ),
                               child: Text(
                                 unit.unitCode,
-                                style: PatrolTypography.tacticalCode.copyWith(fontSize: 11),
+                                style: PatrolTypography.tacticalCode.copyWith(
+                                  fontSize: 11,
+                                  color: PatrolColors.policeLight,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -229,7 +232,7 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
                 controller: _placaController,
                 style: const TextStyle(color: PatrolColors.textPrimary, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.badge_outlined, color: PatrolColors.cyanAccent),
+                  prefixIcon: const Icon(Icons.badge_outlined, color: PatrolColors.policeAccent),
                   filled: true,
                   fillColor: PatrolColors.surfaceCard,
                   border: OutlineInputBorder(
@@ -255,7 +258,7 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_searching_rounded, color: PatrolColors.cyanAccent, size: 20),
+                    const Icon(Icons.location_searching_rounded, color: PatrolColors.policeAccent, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -287,38 +290,50 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
 
               const SizedBox(height: 36),
 
-              // Botón Conectar Guardia
+              // Botón Conectar Guardia Centrado
               SizedBox(
                 width: double.infinity,
                 height: 54,
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: _isLoading ? null : _login,
-                  icon: _isLoading
-                      ? const SizedBox.shrink()
-                      : const Icon(Icons.power_settings_new_rounded, size: 20),
-                  label: _isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'INICIAR GUARDIA Y CONECTAR RADAR',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 13.5,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: PatrolColors.policeBlue,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 4,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                   ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.power_settings_new_rounded, size: 20, color: Colors.white),
+                            SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'INICIAR GUARDIA Y CONECTAR RADAR',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13.5,
+                                  letterSpacing: 0.6,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
             ],

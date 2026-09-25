@@ -41,25 +41,33 @@ class _PatrolShellViewState extends State<PatrolShellView> {
             children: views,
           ),
           bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              color: PatrolColors.surface,
+            decoration: BoxDecoration(
+              color: Colors.white,
               border: Border(
-                top: BorderSide(color: PatrolColors.surfaceBorder, width: 1),
+                top: BorderSide(color: PatrolColors.surfaceBorder, width: 1.0),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, -3),
+                ),
+              ],
             ),
             child: BottomNavigationBar(
               currentIndex: _currentIndex,
               onTap: (index) => setState(() => _currentIndex = index),
-              backgroundColor: PatrolColors.surface,
-              selectedItemColor: PatrolColors.cyanAccent,
+              backgroundColor: Colors.white,
+              elevation: 0,
+              selectedItemColor: PatrolColors.policeBlue,
               unselectedItemColor: PatrolColors.textMuted,
-              selectedFontSize: 11,
-              unselectedFontSize: 11,
+              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11.5),
               type: BottomNavigationBarType.fixed,
               items: [
                 const BottomNavigationBarItem(
-                  icon: Icon(Icons.radar_rounded),
-                  activeIcon: Icon(Icons.radar_rounded, color: PatrolColors.cyanAccent),
+                  icon: Icon(Icons.radar_outlined),
+                  activeIcon: Icon(Icons.radar_rounded),
                   label: 'Mapa Táctico',
                 ),
                 BottomNavigationBarItem(
@@ -70,7 +78,7 @@ class _PatrolShellViewState extends State<PatrolShellView> {
                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
                     ),
                     backgroundColor: PatrolColors.alertCrimson,
-                    child: const Icon(Icons.format_list_bulleted_rounded),
+                    child: const Icon(Icons.format_list_bulleted_outlined),
                   ),
                   activeIcon: Badge(
                     isLabelVisible: activeCount > 0,
@@ -79,13 +87,13 @@ class _PatrolShellViewState extends State<PatrolShellView> {
                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
                     ),
                     backgroundColor: PatrolColors.alertCrimson,
-                    child: const Icon(Icons.format_list_bulleted_rounded, color: PatrolColors.cyanAccent),
+                    child: const Icon(Icons.format_list_bulleted_rounded),
                   ),
                   label: 'Despacho',
                 ),
                 const BottomNavigationBarItem(
                   icon: Icon(Icons.local_police_outlined),
-                  activeIcon: Icon(Icons.local_police_rounded, color: PatrolColors.cyanAccent),
+                  activeIcon: Icon(Icons.local_police_rounded),
                   label: 'Mi Guardia',
                 ),
               ],

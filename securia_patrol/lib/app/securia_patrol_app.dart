@@ -42,15 +42,29 @@ class SecuriaPatrolApp extends StatelessWidget {
         theme: ThemeData(
           useMaterial3: true,
           scaffoldBackgroundColor: PatrolColors.background,
-          colorScheme: const ColorScheme.dark(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: PatrolColors.policeBlue,
             primary: PatrolColors.policeBlue,
-            secondary: PatrolColors.cyanAccent,
-            surface: PatrolColors.surfaceCard,
+            secondary: PatrolColors.policeAccent,
+            surface: Colors.white,
             error: PatrolColors.alertCrimson,
           ),
+          snackBarTheme: SnackBarThemeData(
+            backgroundColor: PatrolColors.policeBlue,
+            contentTextStyle: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+            ),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: Color(0xFF334155), width: 1),
+            ),
+          ),
           appBarTheme: const AppBarTheme(
-            backgroundColor: PatrolColors.surface,
-            foregroundColor: PatrolColors.textPrimary,
+            backgroundColor: Colors.white,
+            foregroundColor: PatrolColors.policeBlue,
             elevation: 0,
             centerTitle: true,
           ),

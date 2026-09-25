@@ -42,11 +42,11 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
     return Scaffold(
       backgroundColor: PatrolColors.background,
       appBar: AppBar(
-        backgroundColor: PatrolColors.surface,
+        backgroundColor: Colors.white,
         elevation: 0,
         title: Row(
           children: [
-            const Icon(Icons.shield_outlined, color: PatrolColors.cyanAccent, size: 22),
+            const Icon(Icons.shield_outlined, color: PatrolColors.policeBlue, size: 22),
             const SizedBox(width: 8),
             Text(
               'Triage y Despacho Táctico',
@@ -56,9 +56,9 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
         ),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: PatrolColors.cyanAccent,
+          indicatorColor: PatrolColors.policeBlue,
           indicatorWeight: 3,
-          labelColor: PatrolColors.cyanAccent,
+          labelColor: PatrolColors.policeBlue,
           unselectedLabelColor: PatrolColors.textMuted,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           tabs: const [
@@ -144,14 +144,21 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: PatrolColors.surfaceCard,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isAssignedToMe
-                  ? PatrolColors.cyanAccent
+                  ? PatrolColors.policeAccent
                   : PatrolColors.surfaceBorder,
               width: isAssignedToMe ? 1.5 : 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,8 +255,8 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
                       icon: const Icon(Icons.map_outlined, size: 16),
                       label: const Text('Rastrear en Mapa'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: PatrolColors.cyanAccent,
-                        side: const BorderSide(color: PatrolColors.cyanAccent),
+                        foregroundColor: PatrolColors.policeBlue,
+                        side: const BorderSide(color: PatrolColors.policeBlue),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),

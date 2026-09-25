@@ -42,7 +42,7 @@ class TacticalHudSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: BoxDecoration(
-        color: PatrolColors.surfaceCard,
+        color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         border: const Border(
           top: BorderSide(color: PatrolColors.surfaceBorder, width: 1.5),
@@ -51,7 +51,7 @@ class TacticalHudSheet extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.6),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -157,32 +157,37 @@ class TacticalHudSheet extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: PatrolColors.surfaceElevated,
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: PatrolColors.surfaceBorder),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildTelemetryItem(
-                  icon: Icons.navigation_rounded,
-                  label: 'DISTANCIA',
-                  value: distStr,
-                  valueColor: PatrolColors.cyanAccent,
+                Expanded(
+                  child: _buildTelemetryItem(
+                    icon: Icons.navigation_rounded,
+                    label: 'DISTANCIA',
+                    value: distStr,
+                    valueColor: PatrolColors.policeAccent,
+                  ),
                 ),
                 Container(width: 1, height: 28, color: PatrolColors.surfaceBorder),
-                _buildTelemetryItem(
-                  icon: Icons.timer_outlined,
-                  label: 'ETA ESTIMADO',
-                  value: etaStr,
-                  valueColor: PatrolColors.warningAmber,
+                Expanded(
+                  child: _buildTelemetryItem(
+                    icon: Icons.timer_outlined,
+                    label: 'ETA ESTIMADO',
+                    value: etaStr,
+                    valueColor: PatrolColors.warningAmber,
+                  ),
                 ),
                 Container(width: 1, height: 28, color: PatrolColors.surfaceBorder),
-                _buildTelemetryItem(
-                  icon: Icons.shield_outlined,
-                  label: 'PATRULLA',
-                  value: incident.assignedPatrolCode ?? 'Sin Asignar',
-                  valueColor: isAssignedToMe ? PatrolColors.cyanAccent : PatrolColors.textSecondary,
+                Expanded(
+                  child: _buildTelemetryItem(
+                    icon: Icons.shield_outlined,
+                    label: 'PATRULLA',
+                    value: incident.assignedPatrolCode ?? 'Sin Asignar',
+                    valueColor: isAssignedToMe ? PatrolColors.policeAccent : PatrolColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -194,8 +199,9 @@ class TacticalHudSheet extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: PatrolColors.surface,
+                color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: PatrolColors.surfaceBorder),
               ),
               child: Text(
                 'Nota: "${incident.description}"',
@@ -289,17 +295,28 @@ class TacticalHudSheet extends StatelessWidget {
       return SizedBox(
         width: double.infinity,
         height: 48,
-        child: ElevatedButton.icon(
+        child: ElevatedButton(
           onPressed: onAcceptDispatch,
-          icon: const Icon(Icons.security_rounded, size: 18),
-          label: const Text(
-            'TOMAR DESPACHO Y ASIGNAR UNIDAD',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: PatrolColors.policeBlue,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.security_rounded, size: 18),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'TOMAR DESPACHO Y ASIGNAR UNIDAD',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -309,17 +326,28 @@ class TacticalHudSheet extends StatelessWidget {
       return SizedBox(
         width: double.infinity,
         height: 48,
-        child: ElevatedButton.icon(
+        child: ElevatedButton(
           onPressed: onEnCamino,
-          icon: const Icon(Icons.flash_on_rounded, size: 18),
-          label: const Text(
-            'EN CAMINO (ACTIVAR SIRENA Y CÓDIGO)',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: PatrolColors.alertCrimson,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.flash_on_rounded, size: 18),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'EN CAMINO (SIRENA ACTIVA)',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -329,17 +357,28 @@ class TacticalHudSheet extends StatelessWidget {
       return SizedBox(
         width: double.infinity,
         height: 48,
-        child: ElevatedButton.icon(
+        child: ElevatedButton(
           onPressed: onEnLugar,
-          icon: const Icon(Icons.pin_drop_rounded, size: 18),
-          label: const Text(
-            'CONFIRMAR ARRIBO (EN EL LUGAR)',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: PatrolColors.warningAmber,
             foregroundColor: Colors.black,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.pin_drop_rounded, size: 18),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'CONFIRMAR ARRIBO (EN EL LUGAR)',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -349,7 +388,7 @@ class TacticalHudSheet extends StatelessWidget {
       return SizedBox(
         width: double.infinity,
         height: 48,
-        child: ElevatedButton.icon(
+        child: ElevatedButton(
           onPressed: () {
             showDialog(
               context: context,
@@ -359,15 +398,26 @@ class TacticalHudSheet extends StatelessWidget {
               ),
             );
           },
-          icon: const Icon(Icons.fact_check_rounded, size: 18),
-          label: const Text(
-            'CONCLUIR Y RESOLVER INCIDENTE',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: PatrolColors.successGreen,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.fact_check_rounded, size: 18),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'CONCLUIR Y RESOLVER INCIDENTE',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       );

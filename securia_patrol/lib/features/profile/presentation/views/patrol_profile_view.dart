@@ -17,11 +17,11 @@ class PatrolProfileView extends StatelessWidget {
     return Scaffold(
       backgroundColor: PatrolColors.background,
       appBar: AppBar(
-        backgroundColor: PatrolColors.surface,
+        backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'Unidad y Guardia Operativa',
-          style: PatrolTypography.titleLarge.copyWith(fontSize: 18),
+          style: PatrolTypography.titleLarge.copyWith(fontSize: 18, color: PatrolColors.policeBlue),
         ),
         centerTitle: true,
       ),
@@ -38,9 +38,16 @@ class PatrolProfileView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: PatrolColors.surfaceCard,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: PatrolColors.surfaceBorder),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -48,14 +55,13 @@ class PatrolProfileView extends StatelessWidget {
                         width: 58,
                         height: 58,
                         decoration: BoxDecoration(
-                          color: PatrolColors.tacticalNavy,
+                          color: PatrolColors.policeBlue,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: PatrolColors.cyanAccent, width: 1.5),
                         ),
                         child: const Center(
                           child: Icon(
                             Icons.local_police_rounded,
-                            color: PatrolColors.cyanAccent,
+                            color: Colors.white,
                             size: 32,
                           ),
                         ),
@@ -68,14 +74,15 @@ class PatrolProfileView extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: PatrolColors.policeBlue.withValues(alpha: 0.25),
+                                color: PatrolColors.policeAccent.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 'UNIDAD ${patrol.unitCode}',
                                 style: PatrolTypography.tacticalCode.copyWith(
-                                  color: PatrolColors.cyanAccent,
+                                  color: PatrolColors.policeAccent,
                                   fontSize: 11,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
@@ -108,9 +115,16 @@ class PatrolProfileView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: PatrolColors.surfaceCard,
-                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: PatrolColors.surfaceBorder),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -164,7 +178,7 @@ class PatrolProfileView extends StatelessWidget {
                         icon: Icons.speed_rounded,
                         value: '3.8 min',
                         label: 'Tiempo Prom. Respuesta',
-                        accentColor: PatrolColors.cyanAccent,
+                        accentColor: PatrolColors.policeAccent,
                       ),
                     ),
                   ],
@@ -196,15 +210,22 @@ class PatrolProfileView extends StatelessWidget {
 
                 // 4. Ubicación actual reportada
                 Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: PatrolColors.surfaceCard,
-                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: PatrolColors.surfaceBorder),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.my_location_rounded, color: PatrolColors.cyanAccent, size: 20),
+                      const Icon(Icons.my_location_rounded, color: PatrolColors.policeAccent, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -292,7 +313,7 @@ class PatrolProfileView extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.2) : Colors.transparent,
+            color: isSelected ? color.withValues(alpha: 0.15) : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected ? color : Colors.transparent,
@@ -304,7 +325,7 @@ class PatrolProfileView extends StatelessWidget {
               label,
               style: TextStyle(
                 color: isSelected ? color : PatrolColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 fontSize: 11.5,
               ),
             ),
@@ -323,9 +344,16 @@ class PatrolProfileView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: PatrolColors.surfaceCard,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: PatrolColors.surfaceBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

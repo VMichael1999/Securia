@@ -10,7 +10,7 @@ class PatrolTypography {
         fontSize: 20,
         fontWeight: FontWeight.w800,
         color: PatrolColors.textPrimary,
-        letterSpacing: -0.2,
+        letterSpacing: 0.0,
       );
 
   static TextStyle get titleMedium => GoogleFonts.plusJakartaSans(
@@ -34,7 +34,7 @@ class PatrolTypography {
   static TextStyle get telemetry => GoogleFonts.jetBrainsMono(
         fontSize: 13,
         fontWeight: FontWeight.w700,
-        color: PatrolColors.cyanAccent,
+        color: PatrolColors.policeAccent,
         letterSpacing: 0.5,
       );
 

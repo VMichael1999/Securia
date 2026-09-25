@@ -54,7 +54,7 @@ class _BeaconMarkerWidgetState extends State<BeaconMarkerWidget>
   @override
   Widget build(BuildContext context) {
     final color = widget.isAssignedToMe
-        ? PatrolColors.cyanAccent
+        ? PatrolColors.policeAccent
         : widget.incident.urgency == UrgencyLevel.critica
             ? PatrolColors.alertCrimson
             : widget.incident.type.color;

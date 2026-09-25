@@ -43,10 +43,14 @@ class _TacticalMapViewState extends State<TacticalMapView> {
               SnackBar(
                 content: Text(
                   state.statusMessage!,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
                 ),
-                backgroundColor: PatrolColors.tacticalNavy,
+                backgroundColor: PatrolColors.surfaceCard,
                 behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: PatrolColors.surfaceBorder, width: 1.2),
+                ),
                 duration: const Duration(seconds: 3),
               ),
             );
@@ -69,21 +73,10 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                   maxZoom: 18.0,
                 ),
                 children: [
-                  // Capa base de Tiles OpenStreetMap con filtro oscuro táctico
+                  // Capa base limpia y brillante de Tiles OpenStreetMap (igual a la app ciudadana)
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'pe.securia.patrol',
-                    tileBuilder: (context, tileWidget, tile) {
-                      return ColorFiltered(
-                        colorFilter: const ColorFilter.matrix([
-                          0.25, 0, 0, 0, 0,
-                          0, 0.28, 0, 0, 0,
-                          0, 0, 0.35, 0, 0,
-                          0, 0, 0, 1.0, 0,
-                        ]),
-                        child: tileWidget,
-                      );
-                    },
                   ),
 
                   // Perímetro de Radar de Cobertura de la Patrulla (3.5 km)
@@ -93,8 +86,8 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                         point: patrolLatLng,
                         radius: state.radarRadiusKm * 1000,
                         useRadiusInMeter: true,
-                        color: PatrolColors.cyanAccent.withValues(alpha: 0.06),
-                        borderColor: PatrolColors.cyanAccent.withValues(alpha: 0.4),
+                        color: PatrolColors.policeAccent.withValues(alpha: 0.08),
+                        borderColor: PatrolColors.policeAccent.withValues(alpha: 0.4),
                         borderStrokeWidth: 1.5,
                       ),
                     ],
@@ -102,13 +95,13 @@ class _TacticalMapViewState extends State<TacticalMapView> {
 
                   // Polilínea dinámica de intercepción táctica (Patrulla -> Incidente)
                   if (state.routePolyline.isNotEmpty) ...[
-                    // Halo brillante de ruta
+                    // Halo sutil de ruta
                     PolylineLayer(
                       polylines: [
                         Polyline(
                           points: state.routePolyline,
-                          color: PatrolColors.cyanAccent.withValues(alpha: 0.25),
-                          strokeWidth: 8.0,
+                          color: PatrolColors.policeAccent.withValues(alpha: 0.25),
+                          strokeWidth: 6.0,
                         ),
                       ],
                     ),
@@ -119,7 +112,7 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                           points: state.routePolyline,
                           color: state.isSirenActive
                               ? PatrolColors.alertCrimson
-                              : PatrolColors.cyanAccent,
+                              : PatrolColors.policeAccent,
                           strokeWidth: 3.8,
                         ),
                       ],
@@ -133,7 +126,7 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                       Marker(
                         point: patrolLatLng,
                         width: 90,
-                        height: 60,
+                        height: 72,
                         alignment: Alignment.center,
                         child: PatrolMarkerWidget(
                           unitCode: state.currentPatrol.unitCode,
@@ -177,15 +170,16 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                     children: [
                       // Tarjeta de Identificación de Patrulla
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
-                          color: PatrolColors.surfaceCard.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: PatrolColors.surfaceBorder),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.4),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 10,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
@@ -226,7 +220,7 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                         onTap: () {
                           context.read<PatrolBloc>().add(const PatrolToggleSiren());
                         },
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -234,22 +228,22 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                             gradient: state.isSirenActive
                                 ? PatrolColors.policeSirenGradient
                                 : null,
-                            color: state.isSirenActive ? null : PatrolColors.surfaceCard,
-                            borderRadius: BorderRadius.circular(12),
+                            color: state.isSirenActive ? null : Colors.white,
+                            borderRadius: BorderRadius.circular(14),
                             border: Border.all(
                               color: state.isSirenActive
                                   ? Colors.white
                                   : PatrolColors.surfaceBorder,
                             ),
-                            boxShadow: state.isSirenActive
-                                ? [
-                                    BoxShadow(
-                                      color: PatrolColors.alertCrimson.withValues(alpha: 0.6),
-                                      blurRadius: 12,
-                                      spreadRadius: 2,
-                                    ),
-                                  ]
-                                : null,
+                            boxShadow: [
+                              BoxShadow(
+                                color: state.isSirenActive
+                                    ? PatrolColors.alertCrimson.withValues(alpha: 0.5)
+                                    : Colors.black.withValues(alpha: 0.08),
+                                blurRadius: state.isSirenActive ? 12 : 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
@@ -257,14 +251,14 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                                 state.isSirenActive
                                     ? Icons.emergency_rounded
                                     : Icons.notifications_active_outlined,
-                                color: state.isSirenActive ? Colors.white : PatrolColors.cyanAccent,
+                                color: state.isSirenActive ? Colors.white : PatrolColors.alertCrimson,
                                 size: 18,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 state.isSirenActive ? 'SIRENA ACTIVA' : 'CÓDIGO SIRENA',
                                 style: TextStyle(
-                                  color: state.isSirenActive ? Colors.white : PatrolColors.textPrimary,
+                                  color: state.isSirenActive ? Colors.white : PatrolColors.alertCrimson,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 11,
                                 ),
@@ -327,8 +321,9 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                     ],
                     FloatingActionButton.small(
                       heroTag: 'patrol_center',
-                      backgroundColor: PatrolColors.surfaceCard,
-                      foregroundColor: PatrolColors.cyanAccent,
+                      backgroundColor: Colors.white,
+                      foregroundColor: PatrolColors.policeBlue,
+                      elevation: 3,
                       onPressed: () => _centerOnPatrol(patrolLatLng),
                       child: const Icon(Icons.local_police_rounded),
                     ),

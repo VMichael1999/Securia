@@ -59,8 +59,8 @@ class _PatrolMarkerWidgetState extends State<PatrolMarkerWidget>
         final glowColor = widget.isSirenActive
             ? (_sirenController.value > 0.5
                 ? PatrolColors.alertCrimson
-                : PatrolColors.policeBlue)
-            : PatrolColors.cyanAccent;
+                : PatrolColors.policeAccent)
+            : PatrolColors.policeAccent;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -74,8 +74,8 @@ class _PatrolMarkerWidgetState extends State<PatrolMarkerWidget>
                 border: Border.all(color: glowColor, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: glowColor.withValues(alpha: 0.5),
-                    blurRadius: 8,
+                    color: glowColor.withValues(alpha: 0.3),
+                    blurRadius: 6,
                     spreadRadius: 1,
                   ),
                 ],
@@ -84,24 +84,24 @@ class _PatrolMarkerWidgetState extends State<PatrolMarkerWidget>
                 widget.unitCode,
                 style: PatrolTypography.tacticalCode.copyWith(
                   fontSize: 10,
-                  color: glowColor,
+                  color: Colors.white,
                 ),
               ),
             ),
             const SizedBox(height: 3),
 
-            // Icono central de patrulla con halo brillante
+            // Icono central de patrulla institucional
             Container(
               width: 38,
               height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: PatrolColors.tacticalNavy,
-                border: Border.all(color: glowColor, width: 2),
+                color: PatrolColors.policeBlue,
+                border: Border.all(color: Colors.white, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: glowColor.withValues(alpha: widget.isSirenActive ? 0.8 : 0.4),
-                    blurRadius: widget.isSirenActive ? 14 : 8,
+                    color: glowColor.withValues(alpha: widget.isSirenActive ? 0.8 : 0.35),
+                    blurRadius: widget.isSirenActive ? 14 : 6,
                     spreadRadius: widget.isSirenActive ? 3 : 1,
                   ),
                 ],
