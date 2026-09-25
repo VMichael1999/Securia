@@ -169,141 +169,30 @@ class _CitizenMapViewState extends State<CitizenMapView> {
                 ],
               ),
 
-              // 2. Barra Superior: Filtro "Hoy" vs "Todos" y Categorías
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Banner de Alerta Activa si existe
-                      if (state.activeSosIncident != null)
-                        ActiveAlertBanner(
-                          incident: state.activeSosIncident!,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => IncidentDetailView(
-                                  incident: state.activeSosIncident!,
-                                ),
-                              ),
-                            );
-                          },
-                          onCancel: () {
-                            context.read<CitizenBloc>().add(
-                                  CitizenCancelActiveSos(state.activeSosIncident!.id),
-                                );
-                          },
-                        ),
-
-                      const SizedBox(height: 6),
-
-                      // Tarjeta de Filtros
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
+              // 2. Banner de Alerta Activa si existe (sin pestañas ni filtros)
+              if (state.activeSosIncident != null)
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    child: ActiveAlertBanner(
+                      incident: state.activeSosIncident!,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => IncidentDetailView(
+                              incident: state.activeSosIncident!,
                             ),
-                          ],
-                        ),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              // Filtro de temporalidad: Hoy vs Todos
-                              FilterChip(
-                                label: Text(
-                                  state.filterTodayOnly ? '📅 Solo Hoy' : '🗓️ Todos los días',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: state.filterTodayOnly ? Colors.white : AppColors.primaryNavy,
-                                  ),
-                                ),
-                                selected: state.filterTodayOnly,
-                                selectedColor: AppColors.primaryNavy,
-                                backgroundColor: AppColors.surfaceMuted,
-                                checkmarkColor: Colors.white,
-                                onSelected: (val) {
-                                  context.read<CitizenBloc>().add(
-                                        CitizenFilterChanged(filterTodayOnly: val),
-                                      );
-                                },
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              // Filtro: Categoría Todas
-                              FilterChip(
-                                label: Text(
-                                  'Todas (${incidents.length})',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: state.selectedCategory == null ? Colors.white : AppColors.textPrimary,
-                                  ),
-                                ),
-                                selected: state.selectedCategory == null,
-                                selectedColor: AppColors.accentBlue,
-                                backgroundColor: AppColors.surfaceMuted,
-                                onSelected: (_) {
-                                  context.read<CitizenBloc>().add(
-                                        const CitizenFilterChanged(clearCategory: true),
-                                      );
-                                },
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              // Categorías individuales
-                              ...[
-                                IncidentType.asalto,
-                                IncidentType.robo,
-                                IncidentType.emergenciaMedica,
-                                IncidentType.accidenteTransito,
-                                IncidentType.sospechoso,
-                              ].map((type) {
-                                final isSelected = state.selectedCategory == type;
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: FilterChip(
-                                    avatar: Icon(type.icon, size: 14, color: isSelected ? Colors.white : type.color),
-                                    label: Text(
-                                      type.title.split(' ').first,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: isSelected ? Colors.white : AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    selected: isSelected,
-                                    selectedColor: type.color,
-                                    backgroundColor: AppColors.surfaceMuted,
-                                    onSelected: (_) {
-                                      context.read<CitizenBloc>().add(
-                                            CitizenFilterChanged(
-                                              selectedCategory: isSelected ? null : type,
-                                              clearCategory: isSelected,
-                                            ),
-                                          );
-                                    },
-                                  ),
-                                );
-                              }),
-                            ],
                           ),
-                        ),
-                      ),
-                    ],
+                        );
+                      },
+                      onCancel: () {
+                        context.read<CitizenBloc>().add(
+                              CitizenCancelActiveSos(state.activeSosIncident!.id),
+                            );
+                      },
+                    ),
                   ),
                 ),
-              ),
 
               // 3. Botón de recentrar ubicación
               Positioned(

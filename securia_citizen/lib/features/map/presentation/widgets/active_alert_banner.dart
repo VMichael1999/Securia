@@ -28,12 +28,12 @@ class ActiveAlertBanner extends StatelessWidget {
       statusSubtitle =
           '${incident.assignedPatrolCode ?? "Unidad"} notificada del incidente';
     } else if (incident.status == IncidentStatus.enCamino) {
-      bannerColor = AppColors.accentBlue;
+      bannerColor = AppColors.primaryNavy;
       statusTitle = '🚔 PATRULLA EN CAMINO';
       statusSubtitle =
           '${incident.assignedPatrolCode ?? "Unidad"} acudiendo a tu ubicación';
     } else if (incident.status == IncidentStatus.enLugar) {
-      bannerColor = const Color(0xFF7C3AED);
+      bannerColor = AppColors.securityGreen;
       statusTitle = '👮 OFICIAL EN EL LUGAR';
       statusSubtitle = 'Intervención y contacto en progreso';
     }
@@ -76,13 +76,17 @@ class ActiveAlertBanner extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        statusTitle,
-                        style: AppTypography.titleMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13.5,
-                          letterSpacing: 0.5,
+                      Flexible(
+                        child: Text(
+                          statusTitle,
+                          style: AppTypography.titleMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13.0,
+                            letterSpacing: 0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),

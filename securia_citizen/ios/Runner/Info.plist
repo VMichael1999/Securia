@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Securia requiere acceso a la cámara para capturar evidencia fotográfica del incidente reportado.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Securia requiere acceso a la galería para adjuntar fotos como evidencia del reporte.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Securia requiere tu ubicación para georreferenciar tu alerta SOS y despachar ayuda policial con precisión.</string>
 </dict>
 </plist>

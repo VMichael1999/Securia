@@ -34,6 +34,19 @@ class SecuriaCitizenApp extends StatelessWidget {
             error: AppColors.emergencyRed,
             surface: Colors.white,
           ),
+          snackBarTheme: SnackBarThemeData(
+            backgroundColor: AppColors.primaryNavy,
+            contentTextStyle: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+            ),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: Color(0xFF334155), width: 1),
+            ),
+          ),
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.white,
             foregroundColor: AppColors.primaryNavy,

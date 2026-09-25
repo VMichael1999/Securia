@@ -8,14 +8,14 @@ class AppTypography {
         fontSize: 28,
         fontWeight: FontWeight.w800,
         color: AppColors.textPrimary,
-        letterSpacing: -0.5,
+        letterSpacing: 0.0,
       );
 
   static TextStyle get titleLarge => GoogleFonts.plusJakartaSans(
         fontSize: 20,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
-        letterSpacing: -0.3,
+        letterSpacing: 0.0,
       );
 
   static TextStyle get titleMedium => GoogleFonts.plusJakartaSans(

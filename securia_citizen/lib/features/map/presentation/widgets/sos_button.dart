@@ -56,8 +56,8 @@ class _SosButtonState extends State<SosButton>
           child: GestureDetector(
             onTap: widget.isSending ? null : widget.onTap,
             child: Container(
-              height: 74,
-              padding: const EdgeInsets.symmetric(horizontal: 28),
+              height: 72,
+              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 8),
               decoration: BoxDecoration(
                 gradient: AppColors.sosGradient,
                 borderRadius: BorderRadius.circular(40),
@@ -80,21 +80,21 @@ class _SosButtonState extends State<SosButton>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SizedBox(
-                            width: 24,
-                            height: 24,
+                            width: 22,
+                            height: 22,
                             child: CircularProgressIndicator(
-                              strokeWidth: 3,
+                              strokeWidth: 2.5,
                               color: Colors.white,
                             ),
                           ),
-                          SizedBox(width: 14),
+                          SizedBox(width: 12),
                           Text(
                             'EMITIENDO ALERTA...',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                              letterSpacing: 1.2,
+                              fontSize: 15,
+                              letterSpacing: 1.0,
                             ),
                           ),
                         ],
@@ -119,21 +119,25 @@ class _SosButtonState extends State<SosButton>
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               'SOS PÁNICO',
-                              style: AppTypography.titleLarge.copyWith(
+                              style: TextStyle(
+                                fontFamily: AppTypography.titleLarge.fontFamily,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
-                                fontSize: 18,
-                                letterSpacing: 1.5,
+                                fontSize: 17,
+                                letterSpacing: 1.0,
                               ),
                             ),
+                            const SizedBox(height: 2),
                             Text(
                               'Presiona para reportar',
-                              style: AppTypography.bodySmall.copyWith(
+                              style: TextStyle(
+                                fontFamily: AppTypography.bodySmall.fontFamily,
                                 color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 11.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
