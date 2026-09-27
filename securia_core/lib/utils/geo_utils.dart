@@ -6,6 +6,9 @@ import '../models/geo_location.dart';
 class GeoUtils {
   static const double _earthRadiusKm = 6371.0;
 
+  /// Velocidad promedio de una patrulla en respuesta de emergencia urbana
+  static const double patrolResponseSpeedKmh = 45.0;
+
   /// Calcula la distancia geodésica en kilómetros entre dos coordenadas (Haversine)
   static double calculateDistanceKm(GeoLocation p1, GeoLocation p2) {
     final lat1 = p1.latitude * math.pi / 180.0;
@@ -16,8 +19,12 @@ class GeoUtils {
     final dLat = lat2 - lat1;
     final dLon = lon2 - lon1;
 
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1) * math.cos(lat2) * math.sin(dLon / 2) * math.sin(dLon / 2);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
 
     return _earthRadiusKm * c;
@@ -68,29 +75,35 @@ class GeoUtils {
     // Punto intermedio 1 (Avenida principal)
     final midLat1 = lat1 + (dLat * 0.45);
     final midLon1 = lon1 + (dLon * 0.10);
-    waypoints.add(GeoLocation(
-      latitude: midLat1,
-      longitude: midLon1,
-      address: 'Vía de aproximación',
-    ));
+    waypoints.add(
+      GeoLocation(
+        latitude: midLat1,
+        longitude: midLon1,
+        address: 'Vía de aproximación',
+      ),
+    );
 
     // Punto intermedio 2 (Giro en cruce)
     final midLat2 = lat1 + (dLat * 0.50);
     final midLon2 = lon1 + (dLon * 0.65);
-    waypoints.add(GeoLocation(
-      latitude: midLat2,
-      longitude: midLon2,
-      address: 'Giro a la derecha',
-    ));
+    waypoints.add(
+      GeoLocation(
+        latitude: midLat2,
+        longitude: midLon2,
+        address: 'Giro a la derecha',
+      ),
+    );
 
     // Punto intermedio 3 (Tramo final directo)
     final midLat3 = lat1 + (dLat * 0.88);
     final midLon3 = lon1 + (dLon * 0.95);
-    waypoints.add(GeoLocation(
-      latitude: midLat3,
-      longitude: midLon3,
-      address: 'Aproximación final',
-    ));
+    waypoints.add(
+      GeoLocation(
+        latitude: midLat3,
+        longitude: midLon3,
+        address: 'Aproximación final',
+      ),
+    );
 
     waypoints.add(destination);
     return waypoints;

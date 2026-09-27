@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../models/enums.dart';
 import '../models/geo_location.dart';
@@ -14,6 +15,11 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
       InMemorySecuriaRepository._internal();
 
   factory InMemorySecuriaRepository() => _instance;
+
+  /// Instancia aislada con los datos semilla, para que cada test parta limpio
+  @visibleForTesting
+  factory InMemorySecuriaRepository.fresh() =>
+      InMemorySecuriaRepository._internal();
 
   final _uuid = const Uuid();
 
@@ -95,7 +101,7 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
 
     // Incidentes precargados (hoy y días anteriores para demostrar filtrado)
     _incidents.addAll([
-      // 1. Incidente reportado hoy en San Borja (cerca del usuario)
+      // 1. Incidente reportado hoy en San Borja por otro vecino (pendiente de despacho)
       IncidentModel(
         id: 'inc_today_01',
         type: IncidentType.asalto,
@@ -108,9 +114,9 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
           address: 'Av. Javier Prado Este cuadra 21, San Borja',
           reference: 'Frente a estación La Cultura',
         ),
-        citizenId: 'cit_001',
-        citizenName: 'Michael Anthony Valdiviezo',
-        citizenPhone: '984 512 893',
+        citizenId: 'cit_004',
+        citizenName: 'Lucía Ramos',
+        citizenPhone: '962 330 781',
         timestamp: now.subtract(const Duration(minutes: 18)),
         status: IncidentStatus.reportado,
         urgency: UrgencyLevel.critica,
@@ -296,6 +302,30 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
   }
 
   @override
+  Future<void> updateIncidentDetails(
+    String incidentId, {
+    IncidentType? type,
+    String? description,
+    String? photoBase64,
+    String? photoPath,
+    UrgencyLevel? urgency,
+  }) async {
+    final index = _incidents.indexWhere((i) => i.id == incidentId);
+    if (index == -1) return;
+
+    final current = _incidents[index];
+    _incidents[index] = current.copyWith(
+      type: type,
+      title: type != null ? '${type.title} en progreso' : null,
+      description: description,
+      photoBase64: photoBase64,
+      photoPath: photoPath,
+      urgency: urgency,
+    );
+    _notifyIncidents();
+  }
+
+  @override
   Future<void> updateIncidentStatus(
     String incidentId,
     IncidentStatus newStatus, {
@@ -309,6 +339,16 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
     if (index == -1) return;
 
     final current = _incidents[index];
+
+    // Evita que dos unidades tomen el mismo incidente
+    if (newStatus == IncidentStatus.asignado &&
+        current.status != IncidentStatus.reportado &&
+        current.assignedPatrolId != patrolId) {
+      throw StateError(
+        'El incidente ya es atendido por ${current.assignedPatrolCode ?? 'otra unidad'}',
+      );
+    }
+
     final updatedNotes = List<String>.from(current.notes);
     if (resolutionNote != null && resolutionNote.isNotEmpty) {
       updatedNotes.add(resolutionNote);
@@ -318,7 +358,7 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
     List<GeoLocation> waypoints = current.routeWaypoints;
     if (newStatus == IncidentStatus.enCamino && patrolLocation != null) {
       waypoints = GeoUtils.generateUrbanPolyline(patrolLocation, current.location);
-    } else if (newStatus == IncidentStatus.resuelto) {
+    } else if (newStatus.isClosed) {
       waypoints = [];
     }
 
@@ -332,16 +372,18 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
       notes: updatedNotes,
     );
 
-    // Actualizar estado de la patrulla si corresponde
-    if (patrolId != null) {
-      final pIndex = _patrols.indexWhere((p) => p.id == patrolId);
+    // Actualizar la patrulla involucrada, aunque quien llama no la indique
+    // (p. ej. el ciudadano cancela una alerta ya asignada)
+    final involvedPatrolId = patrolId ?? current.assignedPatrolId;
+    if (involvedPatrolId != null) {
+      final pIndex = _patrols.indexWhere((p) => p.id == involvedPatrolId);
       if (pIndex != -1) {
         _patrols[pIndex] = _patrols[pIndex].copyWith(
-          status: newStatus == IncidentStatus.resuelto
+          status: newStatus.isClosed
               ? PatrolStatus.disponible
               : PatrolStatus.enRespuesta,
-          activeIncidentId:
-              newStatus == IncidentStatus.resuelto ? null : incidentId,
+          activeIncidentId: newStatus.isClosed ? null : incidentId,
+          clearActiveIncident: newStatus.isClosed,
         );
         _notifyPatrols();
       }

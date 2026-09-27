@@ -32,6 +32,7 @@ class PatrolUnitModel {
     double? coverageRadiusKm,
     PatrolStatus? status,
     String? activeIncidentId,
+    bool clearActiveIncident = false,
   }) {
     return PatrolUnitModel(
       id: id ?? this.id,
@@ -41,7 +42,9 @@ class PatrolUnitModel {
       location: location ?? this.location,
       coverageRadiusKm: coverageRadiusKm ?? this.coverageRadiusKm,
       status: status ?? this.status,
-      activeIncidentId: activeIncidentId ?? this.activeIncidentId,
+      activeIncidentId: clearActiveIncident
+          ? null
+          : (activeIncidentId ?? this.activeIncidentId),
     );
   }
 

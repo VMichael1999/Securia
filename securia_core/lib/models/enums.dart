@@ -1,77 +1,120 @@
 import 'package:flutter/material.dart';
 
 /// Tipo de incidente o emergencia de seguridad
+///
+/// Cada tipo define su urgencia por defecto para que el ciudadano reporte
+/// con un solo toque, sin tener que clasificar la gravedad.
 enum IncidentType {
+  emergenciaGeneral(
+    title: 'Emergencia SOS',
+    shortLabel: 'SOS',
+    code: 'SOS',
+    color: Color(0xFFDC2626),
+    icon: Icons.sos_rounded,
+    defaultUrgency: UrgencyLevel.critica,
+  ),
   asalto(
     title: 'Asalto a mano armada',
+    shortLabel: 'Asalto',
     code: 'ASALTO',
-    color: Color(0xFFDC2626), // Rojo emergencia
+    color: Color(0xFFDC2626),
     icon: Icons.shield_outlined,
-    urgencyText: 'Crítica',
+    defaultUrgency: UrgencyLevel.critica,
   ),
   robo(
     title: 'Robo / Hurto al paso',
+    shortLabel: 'Robo',
     code: 'ROBO',
-    color: Color(0xFFEA580C), // Naranja intenso
+    color: Color(0xFFEA580C),
     icon: Icons.warning_amber_rounded,
-    urgencyText: 'Alta',
+    defaultUrgency: UrgencyLevel.alta,
   ),
   emergenciaMedica(
     title: 'Emergencia Médica / Ambulancia',
+    shortLabel: 'Médica',
     code: 'MEDICA',
-    color: Color(0xFFE11D48), // Carmesí médico
+    color: Color(0xFFE11D48),
     icon: Icons.medical_services_outlined,
-    urgencyText: 'Crítica',
+    defaultUrgency: UrgencyLevel.critica,
   ),
   accidenteTransito(
     title: 'Accidente de tránsito',
+    shortLabel: 'Accidente',
     code: 'ACCIDENTE',
-    color: Color(0xFFD97706), // Ámbar
+    color: Color(0xFFD97706),
     icon: Icons.car_crash_outlined,
-    urgencyText: 'Alta',
+    defaultUrgency: UrgencyLevel.alta,
   ),
   incendio(
     title: 'Incendio / Siniestro',
+    shortLabel: 'Incendio',
     code: 'INCENDIO',
-    color: Color(0xFFB91C1C), // Rojo fuego
+    color: Color(0xFFB91C1C),
     icon: Icons.local_fire_department_outlined,
-    urgencyText: 'Crítica',
+    defaultUrgency: UrgencyLevel.critica,
   ),
   sospechoso(
     title: 'Actividad sospechosa',
+    shortLabel: 'Sospechoso',
     code: 'SOSPECHOSO',
-    color: Color(0xFF4F46E5), // Índigo preventivo
+    color: Color(0xFF4F46E5),
     icon: Icons.person_search_outlined,
-    urgencyText: 'Media',
+    defaultUrgency: UrgencyLevel.media,
   ),
   violencia(
     title: 'Violencia / Agresión física',
+    shortLabel: 'Violencia',
     code: 'VIOLENCIA',
-    color: Color(0xFF7C2D12), // Marrón rojizo
-    icon: Icons.gavel_rounded,
-    urgencyText: 'Alta',
+    color: Color(0xFF9F1239),
+    icon: Icons.front_hand_outlined,
+    defaultUrgency: UrgencyLevel.critica,
   ),
   otro(
     title: 'Otra emergencia ciudadana',
+    shortLabel: 'Otro',
     code: 'OTRO',
-    color: Color(0xFF475569), // Gris pizarra
+    color: Color(0xFF475569),
     icon: Icons.report_problem_outlined,
-    urgencyText: 'Media',
+    defaultUrgency: UrgencyLevel.media,
   );
 
   final String title;
+  final String shortLabel;
   final String code;
   final Color color;
   final IconData icon;
-  final String urgencyText;
+  final UrgencyLevel defaultUrgency;
 
   const IncidentType({
     required this.title,
+    required this.shortLabel,
     required this.code,
     required this.color,
     required this.icon,
-    required this.urgencyText,
+    required this.defaultUrgency,
   });
+
+  /// Tipos que el ciudadano puede elegir al reportar un incidente con detalle
+  static const List<IncidentType> reportTypes = [
+    asalto,
+    robo,
+    violencia,
+    emergenciaMedica,
+    accidenteTransito,
+    incendio,
+    sospechoso,
+    otro,
+  ];
+
+  /// Opciones para precisar una alerta SOS inmediata ya enviada
+  static const List<IncidentType> sosFollowUpTypes = [
+    asalto,
+    violencia,
+    emergenciaMedica,
+    accidenteTransito,
+    incendio,
+    otro,
+  ];
 }
 
 /// Estado en el ciclo de vida del reporte de incidente
@@ -116,6 +159,10 @@ enum IncidentStatus {
     required this.description,
     required this.badgeColor,
   });
+
+  /// El incidente ya no requiere acción (resuelto o cancelado)
+  bool get isClosed =>
+      this == IncidentStatus.resuelto || this == IncidentStatus.cancelado;
 }
 
 /// Nivel de urgencia de la alerta
@@ -128,10 +175,7 @@ enum UrgencyLevel {
   final String label;
   final Color color;
 
-  const UrgencyLevel({
-    required this.label,
-    required this.color,
-  });
+  const UrgencyLevel({required this.label, required this.color});
 }
 
 /// Estado del agente o patrulla policial
@@ -143,8 +187,5 @@ enum PatrolStatus {
   final String label;
   final Color color;
 
-  const PatrolStatus({
-    required this.label,
-    required this.color,
-  });
+  const PatrolStatus({required this.label, required this.color});
 }

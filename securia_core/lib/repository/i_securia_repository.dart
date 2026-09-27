@@ -39,7 +39,21 @@ abstract class ISecuriaRepository {
     String? citizenId,
   });
 
+  /// Completa los datos de un incidente ya emitido (tipo, detalle, evidencia).
+  ///
+  /// Permite enviar la alerta primero y precisarla después, sin retrasar el SOS.
+  Future<void> updateIncidentDetails(
+    String incidentId, {
+    IncidentType? type,
+    String? description,
+    String? photoBase64,
+    String? photoPath,
+    UrgencyLevel? urgency,
+  });
+
   /// Actualiza el estado de un incidente (despacho, en camino, en el lugar, resuelto)
+  ///
+  /// Lanza [StateError] si se intenta asignar un incidente que ya atiende otra patrulla.
   Future<void> updateIncidentStatus(
     String incidentId,
     IncidentStatus newStatus, {
