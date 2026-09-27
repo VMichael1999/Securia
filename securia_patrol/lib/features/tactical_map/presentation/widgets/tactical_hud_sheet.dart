@@ -1,428 +1,289 @@
 import 'package:flutter/material.dart';
 import 'package:securia_core/securia_core.dart';
+import '../../../../app/strings/dispatch_strings.dart';
 import '../../../../app/theme/patrol_colors.dart';
 import '../../../../app/theme/patrol_typography.dart';
-import 'resolution_dialog.dart';
+import '../models/dispatch_step.dart';
+import 'dispatch_action_button.dart';
+import 'telemetry_tile.dart';
 
-/// Hoja de control táctico inferior para gestión de despacho y ruta policial
+/// Ficha inferior de la intervención: qué, dónde, a cuánto y un solo botón
+/// con el siguiente paso.
 class TacticalHudSheet extends StatelessWidget {
   final IncidentModel incident;
+  final String patrolId;
   final double? distanceMeters;
   final int? etaMinutes;
-  final bool isAssignedToMe;
-  final VoidCallback onAcceptDispatch;
-  final VoidCallback onEnCamino;
-  final VoidCallback onEnLugar;
-  final Function(String note) onResolve;
-  final VoidCallback onClose;
+  final ValueChanged<DispatchStep> onAction;
+  final VoidCallback onCallCitizen;
+
+  /// `null` oculta el botón cerrar (despacho propio en curso)
+  final VoidCallback? onClose;
 
   const TacticalHudSheet({
     super.key,
     required this.incident,
+    required this.patrolId,
     this.distanceMeters,
     this.etaMinutes,
-    required this.isAssignedToMe,
-    required this.onAcceptDispatch,
-    required this.onEnCamino,
-    required this.onEnLugar,
-    required this.onResolve,
-    required this.onClose,
+    required this.onAction,
+    required this.onCallCitizen,
+    this.onClose,
   });
 
   @override
   Widget build(BuildContext context) {
-    final distStr = distanceMeters != null
-        ? (distanceMeters! >= 1000
-            ? '${(distanceMeters! / 1000).toStringAsFixed(1)} km'
-            : '${distanceMeters!.toStringAsFixed(0)} m')
-        : '--';
-
-    final etaStr = etaMinutes != null ? '$etaMinutes min' : '--';
+    final step = DispatchStep.of(incident, patrolId: patrolId);
+    final takenByOther =
+        step == DispatchStep.none &&
+        !incident.status.isClosed &&
+        incident.assignedPatrolCode != null;
+    final distance = distanceMeters;
+    final eta = etaMinutes;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: PatrolColors.surfaceCard,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         border: const Border(
           top: BorderSide(color: PatrolColors.surfaceBorder, width: 1.5),
-          left: BorderSide(color: PatrolColors.surfaceBorder, width: 1),
-          right: BorderSide(color: PatrolColors.surfaceBorder, width: 1),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: PatrolColors.background.withValues(alpha: 0.6),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Barra de agarre
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: PatrolColors.surfaceBorder,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Encabezado de incidente con badges y botón cerrar
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: incident.type.color.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: incident.type.color.withValues(alpha: 0.6)),
-                ),
-                child: Icon(incident.type.icon, color: incident.type.color, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: incident.urgency.color.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: incident.urgency.color),
-                          ),
-                          child: Text(
-                            'URGENCIA ${incident.urgency.label.toUpperCase()}',
-                            style: TextStyle(
-                              color: incident.urgency.color,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: incident.status.badgeColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            incident.status.label,
-                            style: TextStyle(
-                              color: incident.status.badgeColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      incident.title,
-                      style: PatrolTypography.titleMedium.copyWith(fontSize: 15),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      incident.location.address,
-                      style: PatrolTypography.bodySmall.copyWith(fontSize: 12),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                  color: PatrolColors.surfaceBorder,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, color: PatrolColors.textMuted, size: 20),
-                onPressed: onClose,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Telemetría táctica (Distancia, Tiempo estimado, Patrulla asignada)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: PatrolColors.surfaceBorder),
             ),
-            child: Row(
+            const SizedBox(height: 12),
+
+            // Qué y en qué estado
+            Row(
               children: [
-                Expanded(
-                  child: _buildTelemetryItem(
-                    icon: Icons.navigation_rounded,
-                    label: 'DISTANCIA',
-                    value: distStr,
-                    valueColor: PatrolColors.policeAccent,
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: incident.type.color,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    incident.type.icon,
+                    color: PatrolColors.textPrimary,
+                    size: 26,
                   ),
                 ),
-                Container(width: 1, height: 28, color: PatrolColors.surfaceBorder),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: _buildTelemetryItem(
-                    icon: Icons.timer_outlined,
-                    label: 'ETA ESTIMADO',
-                    value: etaStr,
-                    valueColor: PatrolColors.warningAmber,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        incident.type.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: PatrolTypography.titleMedium.copyWith(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          color: PatrolColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          _Badge(
+                            text: incident.urgency.label.toUpperCase(),
+                            color: incident.urgency.color,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: _Badge(
+                              text: incident.status.label,
+                              color: incident.status.badgeColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                Container(width: 1, height: 28, color: PatrolColors.surfaceBorder),
-                Expanded(
-                  child: _buildTelemetryItem(
-                    icon: Icons.shield_outlined,
-                    label: 'PATRULLA',
-                    value: incident.assignedPatrolCode ?? 'Sin Asignar',
-                    valueColor: isAssignedToMe ? PatrolColors.policeAccent : PatrolColors.textSecondary,
+                if (onClose != null)
+                  IconButton(
+                    onPressed: onClose,
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: PatrolColors.textSecondary,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: PatrolColors.surfaceElevated,
+                    ),
                   ),
-                ),
               ],
             ),
-          ),
+            const SizedBox(height: 10),
 
-          if (incident.description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: PatrolColors.surfaceBorder),
-              ),
-              child: Text(
-                'Nota: "${incident.description}"',
-                style: const TextStyle(
+            // Dónde y lo que dijo el ciudadano
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_rounded,
                   color: PatrolColors.textSecondary,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
+                  size: 16,
                 ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    incident.location.address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: PatrolColors.textPrimary,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (incident.photoPath != null)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: Icon(
+                      Icons.photo_camera_rounded,
+                      color: PatrolColors.policeAccent,
+                      size: 16,
+                    ),
+                  ),
+              ],
+            ),
+            if (incident.description.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                incident.description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 14),
-
-          // Botones de acción táctica según estado del ciclo de vida
-          _buildActionButtons(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTelemetryItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color valueColor,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: PatrolColors.textMuted),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: PatrolColors.textMuted,
-                fontSize: 9.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: PatrolTypography.telemetry.copyWith(
-            color: valueColor,
-            fontSize: 13,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButtons(BuildContext context) {
-    if (incident.status == IncidentStatus.resuelto) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: PatrolColors.successGreen.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: PatrolColors.successGreen),
-        ),
-        child: const Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle_rounded, color: PatrolColors.successGreen, size: 18),
-              SizedBox(width: 8),
-              Text(
-                'INTERVENCIÓN RESUELTA Y CONCLUIDA',
-                style: TextStyle(
-                  color: PatrolColors.successGreen,
-                  fontWeight: FontWeight.w800,
+                style: const TextStyle(
+                  color: PatrolColors.textSecondary,
                   fontSize: 12.5,
                 ),
               ),
             ],
-          ),
-        ),
-      );
-    }
+            const SizedBox(height: 12),
 
-    if (!isAssignedToMe && incident.status == IncidentStatus.reportado) {
-      return SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: onAcceptDispatch,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PatrolColors.policeBlue,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.security_rounded, size: 18),
-              SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'TOMAR DESPACHO Y ASIGNAR UNIDAD',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+            // A cuánto + contacto
+            Row(
+              children: [
+                Expanded(
+                  child: TelemetryTile(
+                    label: DispatchStrings.distanceLabel,
+                    value:
+                        distance == null
+                            ? DispatchStrings.noValue
+                            : GeoUtils.formatDistance(distance / 1000),
+                    icon: Icons.straighten_rounded,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (incident.status == IncidentStatus.asignado) {
-      return SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: onEnCamino,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PatrolColors.alertCrimson,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.flash_on_rounded, size: 18),
-              SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'EN CAMINO (SIRENA ACTIVA)',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TelemetryTile(
+                    label: DispatchStrings.etaLabel,
+                    value:
+                        eta == null
+                            ? DispatchStrings.noValue
+                            : DispatchStrings.minutes(eta),
+                    icon: Icons.timer_outlined,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (incident.status == IncidentStatus.enCamino) {
-      return SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: onEnLugar,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PatrolColors.warningAmber,
-            foregroundColor: Colors.black,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.pin_drop_rounded, size: 18),
-              SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'CONFIRMAR ARRIBO (EN EL LUGAR)',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 58,
+                  height: 58,
+                  child: IconButton(
+                    tooltip: DispatchStrings.callCitizen,
+                    onPressed: onCallCitizen,
+                    icon: const Icon(Icons.phone_rounded),
+                    style: IconButton.styleFrom(
+                      backgroundColor: PatrolColors.policeBlue,
+                      foregroundColor: PatrolColors.textPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(
+                          color: PatrolColors.surfaceBorder,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+              ],
+            ),
+            const SizedBox(height: 12),
 
-    if (incident.status == IncidentStatus.enLugar) {
-      return SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (ctx) => ResolutionDialog(
-                incident: incident,
-                onConfirmResolution: onResolve,
-              ),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PatrolColors.successGreen,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.fact_check_rounded, size: 18),
-              SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'CONCLUIR Y RESOLVER INCIDENTE',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+            if (takenByOther)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: PatrolColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ),
-            ],
-          ),
+                child: Text(
+                  DispatchStrings.takenBy(incident.assignedPatrolCode!),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: PatrolColors.textSecondary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              )
+            else
+              DispatchActionButton(step: step, onPressed: () => onAction(step)),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
+}
 
-    return const SizedBox.shrink();
+class _Badge extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _Badge({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.8)),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
   }
 }

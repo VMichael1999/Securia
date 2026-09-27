@@ -74,7 +74,7 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
             controller: _tabController,
             children: [
               _buildIncidentsList(
-                incidents: state.activeIncidents,
+                incidents: state.triageQueue,
                 state: state,
                 emptyMessage: 'No hay emergencias pendientes en el sector.',
               ),
@@ -271,7 +271,7 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
                           widget.onSwitchTab?.call(0);
                         },
                         icon: const Icon(Icons.flash_on_rounded, size: 16),
-                        label: const Text('Tomar'),
+                        label: const Text('Aceptar'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: PatrolColors.alertCrimson,
                           foregroundColor: Colors.white,

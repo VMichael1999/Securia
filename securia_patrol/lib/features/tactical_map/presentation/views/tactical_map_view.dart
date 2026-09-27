@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -10,7 +11,12 @@ import '../bloc/patrol_event.dart';
 import '../bloc/patrol_state.dart';
 import '../widgets/beacon_marker_widget.dart';
 import '../widgets/patrol_marker_widget.dart';
-import '../widgets/proximity_radar_banner.dart';
+import '../../../../app/strings/dispatch_strings.dart';
+import '../../../../app/utils/phone_launcher.dart';
+import '../models/dispatch_step.dart';
+import '../widgets/incoming_alert_overlay.dart';
+import '../widgets/resolution_sheet.dart';
+import '../widgets/status_toast.dart';
 import '../widgets/tactical_hud_sheet.dart';
 
 /// Vista de Mapa Táctico en Tiempo Real para Unidades de Patrullaje PNP / Serenazgo
@@ -24,6 +30,31 @@ class TacticalMapView extends StatefulWidget {
 class _TacticalMapViewState extends State<TacticalMapView> {
   final MapController _mapController = MapController();
 
+  /// Invierte los tiles claros de OSM: fondo casi negro azulado, calles y
+  /// textos claros y legibles de noche
+  static const ColorFilter _nightMapFilter = ColorFilter.matrix([
+    -0.85, 0, 0, 0, 230, //
+    0, -0.85, 0, 0, 235, //
+    0, 0, -0.80, 0, 245, //
+    0, 0, 0, 1, 0, //
+  ]);
+  String? _toast;
+  Timer? _toastTimer;
+
+  void _showToast(String message) {
+    _toastTimer?.cancel();
+    setState(() => _toast = message);
+    _toastTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _toast = null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _toastTimer?.cancel();
+    super.dispose();
+  }
+
   void _centerOnPatrol(LatLng patrolPos) {
     _mapController.move(patrolPos, 15.0);
   }
@@ -32,34 +63,68 @@ class _TacticalMapViewState extends State<TacticalMapView> {
     _mapController.move(targetPos, 16.0);
   }
 
+  Future<void> _runStep(
+    BuildContext context,
+    DispatchStep step,
+    IncidentModel incident,
+  ) async {
+    final bloc = context.read<PatrolBloc>();
+    switch (step) {
+      case DispatchStep.accept:
+        bloc.add(PatrolAcceptDispatch(incident));
+      case DispatchStep.onTheWay:
+        bloc.add(PatrolEnCamino(incident));
+      case DispatchStep.arrived:
+        bloc.add(PatrolEnLugar(incident));
+      case DispatchStep.conclude:
+        final note = await ResolutionSheet.show(context);
+        if (note != null) {
+          bloc.add(
+            PatrolResolveIncident(incident: incident, resolutionNote: note),
+          );
+        }
+      case DispatchStep.none:
+        break;
+    }
+  }
+
+  Future<void> _callCitizen(
+    BuildContext context,
+    IncidentModel incident,
+  ) async {
+    final ok = await PhoneLauncher.call(incident.citizenPhone);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(DispatchStrings.callUnavailable)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: PatrolColors.background,
       body: BlocConsumer<PatrolBloc, PatrolState>(
-        listener: (context, state) {
-          if (state.statusMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.statusMessage!,
-                  style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                backgroundColor: PatrolColors.surfaceCard,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: PatrolColors.surfaceBorder, width: 1.2),
-                ),
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
-        },
+        listenWhen:
+            (prev, curr) =>
+                curr.statusMessage != null &&
+                curr.statusMessage != prev.statusMessage,
+        listener: (context, state) => _showToast(state.statusMessage!),
         builder: (context, state) {
           final patrolLatLng = state.currentPatrol.location.toLatLng();
           final displayedIncident =
               state.activeDispatchedIncident ?? state.selectedIncident;
+          final incomingAlert =
+              state.activeDispatchedIncident == null
+                  ? state.proximityAlertIncident
+                  : null;
+          final incomingKm =
+              incomingAlert == null
+                  ? 0.0
+                  : GeoUtils.calculateDistanceKm(
+                    state.currentPatrol.location,
+                    incomingAlert.location,
+                  );
 
           return Stack(
             children: [
@@ -73,10 +138,21 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                   maxZoom: 18.0,
                 ),
                 children: [
-                  // Capa base limpia y brillante de Tiles OpenStreetMap (igual a la app ciudadana)
+                  // Capa base OSM (sin API key) invertida a modo noche con tinte azul
+                  // oscuro: coherente con la terminal negra y sin deslumbrar
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'pe.securia.patrol',
+                    tileBuilder:
+                        (context, tileWidget, tile) => ColorFiltered(
+                          colorFilter: _nightMapFilter,
+                          child: tileWidget,
+                        ),
+                  ),
+                  const SimpleAttributionWidget(
+                    source: Text('OpenStreetMap'),
+                    backgroundColor: PatrolColors.surfaceCard,
                   ),
 
                   // Perímetro de Radar de Cobertura de la Patrulla (3.5 km)
@@ -86,8 +162,12 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                         point: patrolLatLng,
                         radius: state.radarRadiusKm * 1000,
                         useRadiusInMeter: true,
-                        color: PatrolColors.policeAccent.withValues(alpha: 0.08),
-                        borderColor: PatrolColors.policeAccent.withValues(alpha: 0.4),
+                        color: PatrolColors.policeAccent.withValues(
+                          alpha: 0.08,
+                        ),
+                        borderColor: PatrolColors.policeAccent.withValues(
+                          alpha: 0.4,
+                        ),
                         borderStrokeWidth: 1.5,
                       ),
                     ],
@@ -100,7 +180,9 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                       polylines: [
                         Polyline(
                           points: state.routePolyline,
-                          color: PatrolColors.policeAccent.withValues(alpha: 0.25),
+                          color: PatrolColors.policeAccent.withValues(
+                            alpha: 0.25,
+                          ),
                           strokeWidth: 6.0,
                         ),
                       ],
@@ -110,9 +192,10 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                       polylines: [
                         Polyline(
                           points: state.routePolyline,
-                          color: state.isSirenActive
-                              ? PatrolColors.alertCrimson
-                              : PatrolColors.policeAccent,
+                          color:
+                              state.isSirenActive
+                                  ? PatrolColors.alertCrimson
+                                  : PatrolColors.policeAccent,
                           strokeWidth: 3.8,
                         ),
                       ],
@@ -150,9 +233,9 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                             isSelected: isSelected,
                             isAssignedToMe: isAssignedToMe,
                             onTap: () {
-                              context
-                                  .read<PatrolBloc>()
-                                  .add(PatrolSelectIncident(incident));
+                              context.read<PatrolBloc>().add(
+                                PatrolSelectIncident(incident),
+                              );
                             },
                           ),
                         );
@@ -165,19 +248,27 @@ class _TacticalMapViewState extends State<TacticalMapView> {
               // 2. Barra Superior Táctica de Estado y Sirena
               SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       // Tarjeta de Identificación de Patrulla
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: PatrolColors.surfaceCard,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: PatrolColors.surfaceBorder),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
+                              color: PatrolColors.background.withValues(
+                                alpha: 0.4,
+                              ),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
@@ -201,11 +292,15 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                               children: [
                                 Text(
                                   state.currentPatrol.unitCode,
-                                  style: PatrolTypography.tacticalCode.copyWith(fontSize: 12),
+                                  style: PatrolTypography.tacticalCode.copyWith(
+                                    fontSize: 12,
+                                  ),
                                 ),
                                 Text(
                                   state.currentPatrol.officerName,
-                                  style: PatrolTypography.bodySmall.copyWith(fontSize: 10),
+                                  style: PatrolTypography.bodySmall.copyWith(
+                                    fontSize: 10,
+                                  ),
                                 ),
                               ],
                             ),
@@ -218,28 +313,43 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                       // Botón Sirena Policial de Respuesta Rápida
                       InkWell(
                         onTap: () {
-                          context.read<PatrolBloc>().add(const PatrolToggleSiren());
+                          context.read<PatrolBloc>().add(
+                            const PatrolToggleSiren(),
+                          );
                         },
                         borderRadius: BorderRadius.circular(14),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            gradient: state.isSirenActive
-                                ? PatrolColors.policeSirenGradient
-                                : null,
-                            color: state.isSirenActive ? null : Colors.white,
+                            gradient:
+                                state.isSirenActive
+                                    ? PatrolColors.policeSirenGradient
+                                    : null,
+                            color:
+                                state.isSirenActive
+                                    ? null
+                                    : PatrolColors.surfaceCard,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: state.isSirenActive
-                                  ? Colors.white
-                                  : PatrolColors.surfaceBorder,
+                              color:
+                                  state.isSirenActive
+                                      ? PatrolColors.textPrimary
+                                      : PatrolColors.surfaceBorder,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: state.isSirenActive
-                                    ? PatrolColors.alertCrimson.withValues(alpha: 0.5)
-                                    : Colors.black.withValues(alpha: 0.08),
+                                color:
+                                    state.isSirenActive
+                                        ? PatrolColors.alertCrimson.withValues(
+                                          alpha: 0.5,
+                                        )
+                                        : PatrolColors.background.withValues(
+                                          alpha: 0.4,
+                                        ),
                                 blurRadius: state.isSirenActive ? 12 : 10,
                                 offset: const Offset(0, 3),
                               ),
@@ -251,14 +361,22 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                                 state.isSirenActive
                                     ? Icons.emergency_rounded
                                     : Icons.notifications_active_outlined,
-                                color: state.isSirenActive ? Colors.white : PatrolColors.alertCrimson,
+                                color:
+                                    state.isSirenActive
+                                        ? PatrolColors.textPrimary
+                                        : PatrolColors.alertCrimson,
                                 size: 18,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                state.isSirenActive ? 'SIRENA ACTIVA' : 'CÓDIGO SIRENA',
+                                state.isSirenActive
+                                    ? 'SIRENA ACTIVA'
+                                    : 'CÓDIGO SIRENA',
                                 style: TextStyle(
-                                  color: state.isSirenActive ? Colors.white : PatrolColors.alertCrimson,
+                                  color:
+                                      state.isSirenActive
+                                          ? PatrolColors.textPrimary
+                                          : PatrolColors.alertCrimson,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 11,
                                 ),
@@ -272,105 +390,97 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                 ),
               ),
 
-              // 3. Banner flotante de detección de proximidad táctica
-              if (state.proximityAlertIncident != null &&
-                  state.activeDispatchedIncident == null)
-                Positioned(
-                  top: 75,
-                  left: 0,
-                  right: 0,
-                  child: SafeArea(
-                    child: ProximityRadarBanner(
-                      incident: state.proximityAlertIncident!,
-                      distanceMeters: GeoUtils.calculateDistanceKm(
-                        state.currentPatrol.location,
-                        state.proximityAlertIncident!.location,
-                      ) * 1000.0,
-                      onAccept: () {
-                        context.read<PatrolBloc>().add(
-                              PatrolAcceptDispatch(state.proximityAlertIncident!),
-                            );
-                      },
-                      onDismiss: () {
-                        context.read<PatrolBloc>().add(
-                              PatrolDismissProximityAlert(
-                                state.proximityAlertIncident!.id,
-                              ),
-                            );
-                      },
-                    ),
+              // Avisos de estado bajo la barra superior (no tapan la acción)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 64),
+                    child: StatusToast(message: _toast),
                   ),
                 ),
+              ),
 
-              // 4. Botones flotantes de recentrado
+              // 3. Zona inferior: recentrar + ficha de intervención
               Positioned(
-                right: 16,
-                bottom: displayedIncident != null ? 280 : 24,
+                left: 0,
+                right: 0,
+                bottom: 0,
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    if (displayedIncident != null) ...[
-                      FloatingActionButton.small(
-                        heroTag: 'target_center',
-                        backgroundColor: PatrolColors.alertCrimson,
-                        foregroundColor: Colors.white,
-                        onPressed: () =>
-                            _centerOnTarget(displayedIncident.location.toLatLng()),
-                        child: const Icon(Icons.gps_fixed_rounded),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16, bottom: 12),
+                      child: Column(
+                        children: [
+                          if (displayedIncident != null) ...[
+                            FloatingActionButton.small(
+                              heroTag: 'target_center',
+                              backgroundColor: PatrolColors.alertCrimson,
+                              foregroundColor: PatrolColors.textPrimary,
+                              onPressed:
+                                  () => _centerOnTarget(
+                                    displayedIncident.location.toLatLng(),
+                                  ),
+                              child: const Icon(Icons.gps_fixed_rounded),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          FloatingActionButton.small(
+                            heroTag: 'patrol_center',
+                            backgroundColor: PatrolColors.surfaceCard,
+                            foregroundColor: PatrolColors.policeAccent,
+                            elevation: 3,
+                            onPressed: () => _centerOnPatrol(patrolLatLng),
+                            child: const Icon(Icons.local_police_rounded),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 10),
-                    ],
-                    FloatingActionButton.small(
-                      heroTag: 'patrol_center',
-                      backgroundColor: Colors.white,
-                      foregroundColor: PatrolColors.policeBlue,
-                      elevation: 3,
-                      onPressed: () => _centerOnPatrol(patrolLatLng),
-                      child: const Icon(Icons.local_police_rounded),
                     ),
+                    if (displayedIncident != null)
+                      TacticalHudSheet(
+                        incident: displayedIncident,
+                        patrolId: state.currentPatrol.id,
+                        distanceMeters: state.distanceToTargetMeters,
+                        etaMinutes: state.etaMinutes,
+                        onAction:
+                            (step) =>
+                                _runStep(context, step, displayedIncident),
+                        onCallCitizen:
+                            () => _callCitizen(context, displayedIncident),
+                        // Un despacho propio en curso no se cierra desde aquí
+                        onClose:
+                            state.activeDispatchedIncident != null
+                                ? null
+                                : () => context.read<PatrolBloc>().add(
+                                  const PatrolClearActiveDispatch(),
+                                ),
+                      ),
                   ],
                 ),
               ),
 
-              // 5. HUD Inferior de Intervención si hay incidente seleccionado o asignado
-              if (displayedIncident != null)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: TacticalHudSheet(
-                    incident: displayedIncident,
-                    distanceMeters: state.distanceToTargetMeters,
-                    etaMinutes: state.etaMinutes,
-                    isAssignedToMe:
-                        displayedIncident.assignedPatrolId == state.currentPatrol.id,
-                    onAcceptDispatch: () {
-                      context
-                          .read<PatrolBloc>()
-                          .add(PatrolAcceptDispatch(displayedIncident));
-                    },
-                    onEnCamino: () {
-                      context
-                          .read<PatrolBloc>()
-                          .add(PatrolEnCamino(displayedIncident));
-                    },
-                    onEnLugar: () {
-                      context
-                          .read<PatrolBloc>()
-                          .add(PatrolEnLugar(displayedIncident));
-                    },
-                    onResolve: (note) {
-                      context.read<PatrolBloc>().add(
-                            PatrolResolveIncident(
-                              incident: displayedIncident,
-                              resolutionNote: note,
-                            ),
-                          );
-                    },
-                    onClose: () {
-                      context
-                          .read<PatrolBloc>()
-                          .add(const PatrolSelectIncident(null));
-                    },
+              // 4. Alerta entrante a pantalla completa (por encima de todo)
+              if (incomingAlert != null)
+                Positioned.fill(
+                  child: IncomingAlertOverlay(
+                    incident: incomingAlert,
+                    distanceMeters: incomingKm * 1000.0,
+                    etaMinutes: GeoUtils.estimateEtaMinutes(
+                      incomingKm,
+                      averageSpeedKmh: GeoUtils.patrolResponseSpeedKmh,
+                    ),
+                    onAccept:
+                        () => context.read<PatrolBloc>().add(
+                          PatrolAcceptDispatch(incomingAlert),
+                        ),
+                    onIgnore:
+                        () => context.read<PatrolBloc>().add(
+                          PatrolDismissProximityAlert(incomingAlert.id),
+                        ),
                   ),
                 ),
             ],

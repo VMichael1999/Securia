@@ -72,3 +72,8 @@ class PatrolChangeDutyStatus extends PatrolEvent {
   final PatrolStatus status;
   const PatrolChangeDutyStatus(this.status);
 }
+
+/// Cerrar el panel HUD y liberar visualización activa de incidente
+class PatrolClearActiveDispatch extends PatrolEvent {
+  const PatrolClearActiveDispatch();
+}

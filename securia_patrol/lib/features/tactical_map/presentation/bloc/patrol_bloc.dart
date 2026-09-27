@@ -2,8 +2,33 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:securia_core/securia_core.dart';
+import '../../../../app/strings/dispatch_strings.dart';
 import 'patrol_event.dart';
 import 'patrol_state.dart';
+
+/// Ruta, distancia y tiempo de llegada desde la patrulla hasta un objetivo
+class _RouteInfo {
+  final List<LatLng> polyline;
+  final double distanceMeters;
+  final int etaMinutes;
+
+  const _RouteInfo(this.polyline, this.distanceMeters, this.etaMinutes);
+
+  factory _RouteInfo.between(GeoLocation from, GeoLocation to) {
+    final distKm = GeoUtils.calculateDistanceKm(from, to);
+    return _RouteInfo(
+      GeoUtils.generateUrbanPolyline(
+        from,
+        to,
+      ).map((g) => g.toLatLng()).toList(),
+      distKm * 1000.0,
+      GeoUtils.estimateEtaMinutes(
+        distKm,
+        averageSpeedKmh: GeoUtils.patrolResponseSpeedKmh,
+      ),
+    );
+  }
+}
 
 class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
   final ISecuriaRepository _repository;
@@ -12,8 +37,8 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
   PatrolBloc({
     required ISecuriaRepository repository,
     required PatrolUnitModel initialPatrol,
-  })  : _repository = repository,
-        super(PatrolState(currentPatrol: initialPatrol)) {
+  }) : _repository = repository,
+       super(PatrolState(currentPatrol: initialPatrol)) {
     on<PatrolStarted>(_onStarted);
     on<PatrolIncidentsReceived>(_onIncidentsReceived);
     on<PatrolLocationUpdated>(_onLocationUpdated);
@@ -25,13 +50,48 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
     on<PatrolToggleSiren>(_onToggleSiren);
     on<PatrolDismissProximityAlert>(_onDismissProximityAlert);
     on<PatrolChangeDutyStatus>(_onChangeDutyStatus);
+    on<PatrolClearActiveDispatch>(_onClearActiveDispatch);
+  }
+
+  /// Copia vigente de un incidente en el repositorio (evita trabajar con snapshots viejos)
+  IncidentModel? _latest(String incidentId) {
+    for (final inc in _repository.getSnapshotIncidents()) {
+      if (inc.id == incidentId) return inc;
+    }
+    return null;
+  }
+
+  /// Estado con la ruta hacia [target], o sin ruta si no hay objetivo
+  PatrolState _withRouteTo(
+    PatrolState base,
+    IncidentModel? target, {
+    GeoLocation? from,
+  }) {
+    if (target == null) {
+      return base.copyWith(
+        routePolyline: const [],
+        clearDistance: true,
+        clearEta: true,
+      );
+    }
+    final route = _RouteInfo.between(
+      from ?? base.currentPatrol.location,
+      target.location,
+    );
+    return base.copyWith(
+      routePolyline: route.polyline,
+      distanceToTargetMeters: route.distanceMeters,
+      etaMinutes: route.etaMinutes,
+    );
   }
 
   void _onStarted(PatrolStarted event, Emitter<PatrolState> emit) {
     emit(state.copyWith(currentPatrol: event.unit, isLoading: true));
 
     _incidentsSubscription?.cancel();
-    _incidentsSubscription = _repository.watchAllIncidents().listen((incidents) {
+    _incidentsSubscription = _repository.watchAllIncidents().listen((
+      incidents,
+    ) {
       add(PatrolIncidentsReceived(incidents));
     });
   }
@@ -41,77 +101,71 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
     Emitter<PatrolState> emit,
   ) {
     final incidents = event.incidents;
-
-    // Detectar si hay una alerta crítica o cercana para desplegar radar HUD
-    IncidentModel? proximityAlert;
-    for (final inc in incidents) {
-      if (inc.status == IncidentStatus.reportado &&
-          !state.dismissedAlertIds.contains(inc.id)) {
-        if (GeoUtils.isWithinRadius(
-          state.currentPatrol.location,
-          inc.location,
-          state.radarRadiusKm,
-        )) {
-          proximityAlert = inc;
-          break;
-        }
+    IncidentModel? findById(String? id) {
+      if (id == null) return null;
+      for (final inc in incidents) {
+        if (inc.id == id) return inc;
       }
+      return null;
     }
 
-    // Actualizar referencia de incidente despachado si existe
-    IncidentModel? updatedDispatched = state.activeDispatchedIncident;
-    if (updatedDispatched != null) {
-      try {
-        updatedDispatched = incidents.firstWhere(
-          (i) => i.id == updatedDispatched!.id,
-        );
-      } catch (_) {
-        updatedDispatched = null;
-      }
-    }
+    // Un despacho cerrado desde fuera (p. ej. el ciudadano canceló) se libera
+    var dispatched = findById(state.activeDispatchedIncident?.id);
+    final closedStatus = dispatched?.status;
+    final dispatchClosedExternally = closedStatus?.isClosed ?? false;
+    if (dispatchClosedExternally) dispatched = null;
 
-    // Actualizar referencia de incidente seleccionado
-    IncidentModel? updatedSelected = state.selectedIncident;
-    if (updatedSelected != null) {
-      try {
-        updatedSelected = incidents.firstWhere(
-          (i) => i.id == updatedSelected!.id,
-        );
-      } catch (_) {
-        updatedSelected = null;
-      }
-    }
+    final selected = findById(state.selectedIncident?.id);
 
-    // Calcular ruta hacia el objetivo
-    final target = updatedDispatched ?? updatedSelected;
-    List<LatLng> polyline = state.routePolyline;
-    double? distMeters;
-    int? eta;
-
-    if (target != null) {
-      polyline = GeoUtils.generateUrbanPolyline(
-        state.currentPatrol.location,
-        target.location,
-      ).map((g) => g.toLatLng()).toList();
-
-      final distKm = GeoUtils.calculateDistanceKm(
-        state.currentPatrol.location,
-        target.location,
-      );
-      distMeters = distKm * 1000.0;
-      eta = GeoUtils.estimateEtaMinutes(distKm, averageSpeedKmh: 45);
-    }
-
-    emit(state.copyWith(
+    final target = dispatched ?? selected;
+    final next = _withRouteTo(state, target).copyWith(
       isLoading: false,
       allIncidents: incidents,
-      proximityAlertIncident: proximityAlert,
-      activeDispatchedIncident: updatedDispatched,
-      selectedIncident: updatedSelected,
-      routePolyline: polyline,
-      distanceToTargetMeters: distMeters,
-      etaMinutes: eta,
-    ));
+      activeDispatchedIncident: dispatched,
+      clearActiveDispatched: dispatched == null,
+      selectedIncident: dispatchClosedExternally ? null : selected,
+      clearSelectedIncident: dispatchClosedExternally || selected == null,
+      isSirenActive: dispatchClosedExternally ? false : null,
+    );
+
+    final alert = _proximityAlertFor(next, incidents);
+    emit(
+      next.copyWith(
+        proximityAlertIncident: alert,
+        clearProximityAlert: alert == null,
+        statusMessage:
+            closedStatus == IncidentStatus.cancelado
+                ? DispatchStrings.citizenCancelled
+                : null,
+      ),
+    );
+  }
+
+  /// Incidente pendiente más urgente dentro del radar, si la unidad está libre
+  IncidentModel? _proximityAlertFor(
+    PatrolState s,
+    List<IncidentModel> incidents,
+  ) {
+    final isFree =
+        s.activeDispatchedIncident == null &&
+        s.currentPatrol.status != PatrolStatus.fueraServicio;
+    if (!isFree) return null;
+
+    final candidates = incidents.where(
+      (inc) =>
+          inc.status == IncidentStatus.reportado &&
+          !s.dismissedAlertIds.contains(inc.id) &&
+          GeoUtils.isWithinRadius(
+            s.currentPatrol.location,
+            inc.location,
+            s.radarRadiusKm,
+          ),
+    );
+    if (candidates.isEmpty) return null;
+
+    return candidates.reduce(
+      (a, b) => b.urgency.index < a.urgency.index ? b : a,
+    );
   }
 
   void _onLocationUpdated(
@@ -125,30 +179,7 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
     _repository.updatePatrolLocation(updatedPatrol.id, event.newLocation);
 
     final target = state.activeDispatchedIncident ?? state.selectedIncident;
-    List<LatLng> polyline = state.routePolyline;
-    double? distMeters;
-    int? eta;
-
-    if (target != null) {
-      polyline = GeoUtils.generateUrbanPolyline(
-        event.newLocation,
-        target.location,
-      ).map((g) => g.toLatLng()).toList();
-
-      final distKm = GeoUtils.calculateDistanceKm(
-        event.newLocation,
-        target.location,
-      );
-      distMeters = distKm * 1000.0;
-      eta = GeoUtils.estimateEtaMinutes(distKm, averageSpeedKmh: 45);
-    }
-
-    emit(state.copyWith(
-      currentPatrol: updatedPatrol,
-      routePolyline: polyline,
-      distanceToTargetMeters: distMeters,
-      etaMinutes: eta,
-    ));
+    emit(_withRouteTo(state.copyWith(currentPatrol: updatedPatrol), target));
   }
 
   void _onSelectIncident(
@@ -156,144 +187,121 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
     Emitter<PatrolState> emit,
   ) {
     final incident = event.incident;
-    if (incident == null) {
-      emit(state.copyWith(
-        clearSelectedIncident: true,
-        routePolyline: const [],
-        clearDistance: true,
-        clearEta: true,
-      ));
-      return;
-    }
-
-    final polyline = GeoUtils.generateUrbanPolyline(
-      state.currentPatrol.location,
-      incident.location,
-    ).map((g) => g.toLatLng()).toList();
-
-    final distKm = GeoUtils.calculateDistanceKm(
-      state.currentPatrol.location,
-      incident.location,
+    emit(
+      _withRouteTo(state, incident).copyWith(
+        selectedIncident: incident,
+        clearSelectedIncident: incident == null,
+      ),
     );
-    final distMeters = distKm * 1000.0;
-
-    emit(state.copyWith(
-      selectedIncident: incident,
-      routePolyline: polyline,
-      distanceToTargetMeters: distMeters,
-      etaMinutes: GeoUtils.estimateEtaMinutes(distKm, averageSpeedKmh: 45),
-    ));
   }
 
   Future<void> _onAcceptDispatch(
     PatrolAcceptDispatch event,
     Emitter<PatrolState> emit,
   ) async {
-    await _repository.updateIncidentStatus(
-      event.incident.id,
-      IncidentStatus.asignado,
-      patrolId: state.currentPatrol.id,
-      patrolCode: state.currentPatrol.unitCode,
-      officerName: state.currentPatrol.officerName,
-      patrolLocation: state.currentPatrol.location,
-    );
+    final unit = state.currentPatrol;
+    try {
+      await _repository.updateIncidentStatus(
+        event.incident.id,
+        IncidentStatus.asignado,
+        patrolId: unit.id,
+        patrolCode: unit.unitCode,
+        officerName: unit.officerName,
+        patrolLocation: unit.location,
+      );
+    } on StateError catch (e) {
+      emit(
+        state.copyWith(
+          clearProximityAlert: true,
+          statusMessage: DispatchStrings.alreadyTaken(e.message),
+        ),
+      );
+      return;
+    }
 
-    final polyline = GeoUtils.generateUrbanPolyline(
-      state.currentPatrol.location,
-      event.incident.location,
-    ).map((g) => g.toLatLng()).toList();
-
-    final distKm = GeoUtils.calculateDistanceKm(
-      state.currentPatrol.location,
-      event.incident.location,
-    );
-    final distMeters = distKm * 1000.0;
-
-    emit(state.copyWith(
-      activeDispatchedIncident: event.incident.copyWith(
-        status: IncidentStatus.asignado,
-        assignedPatrolId: state.currentPatrol.id,
-        assignedPatrolCode: state.currentPatrol.unitCode,
+    final accepted = _latest(event.incident.id) ?? event.incident;
+    emit(
+      _withRouteTo(state, accepted).copyWith(
+        activeDispatchedIncident: accepted,
+        selectedIncident: accepted,
+        clearProximityAlert: true,
+        statusMessage: DispatchStrings.accepted(unit.unitCode),
       ),
-      selectedIncident: event.incident,
-      routePolyline: polyline,
-      distanceToTargetMeters: distMeters,
-      etaMinutes: GeoUtils.estimateEtaMinutes(distKm, averageSpeedKmh: 45),
-      statusMessage: 'Despacho aceptado para la unidad ${state.currentPatrol.unitCode}',
-    ));
+    );
   }
 
   Future<void> _onEnCamino(
     PatrolEnCamino event,
     Emitter<PatrolState> emit,
   ) async {
+    final unit = state.currentPatrol;
     await _repository.updateIncidentStatus(
       event.incident.id,
       IncidentStatus.enCamino,
-      patrolId: state.currentPatrol.id,
-      patrolCode: state.currentPatrol.unitCode,
-      officerName: state.currentPatrol.officerName,
-      patrolLocation: state.currentPatrol.location,
+      patrolId: unit.id,
+      patrolCode: unit.unitCode,
+      officerName: unit.officerName,
+      patrolLocation: unit.location,
     );
 
-    emit(state.copyWith(
-      isSirenActive: true,
-      activeDispatchedIncident: event.incident.copyWith(
-        status: IncidentStatus.enCamino,
+    emit(
+      state.copyWith(
+        isSirenActive: true,
+        activeDispatchedIncident: _latest(event.incident.id),
+        statusMessage: DispatchStrings.onTheWay(unit.unitCode),
       ),
-      statusMessage: 'Unidad ${state.currentPatrol.unitCode} en código rojo hacia el lugar.',
-    ));
+    );
   }
 
   Future<void> _onEnLugar(
     PatrolEnLugar event,
     Emitter<PatrolState> emit,
   ) async {
+    final unit = state.currentPatrol;
     await _repository.updateIncidentStatus(
       event.incident.id,
       IncidentStatus.enLugar,
-      patrolId: state.currentPatrol.id,
-      patrolCode: state.currentPatrol.unitCode,
-      officerName: state.currentPatrol.officerName,
-      patrolLocation: state.currentPatrol.location,
+      patrolId: unit.id,
+      patrolCode: unit.unitCode,
+      officerName: unit.officerName,
+      patrolLocation: unit.location,
     );
 
-    emit(state.copyWith(
-      activeDispatchedIncident: event.incident.copyWith(
-        status: IncidentStatus.enLugar,
+    emit(
+      state.copyWith(
+        // En el lugar la sirena ya no ayuda: se apaga sola
+        isSirenActive: false,
+        activeDispatchedIncident: _latest(event.incident.id),
+        statusMessage: DispatchStrings.arrived,
       ),
-      statusMessage: 'Unidad en el lugar interviniendo la zona de la emergencia.',
-    ));
+    );
   }
 
   Future<void> _onResolveIncident(
     PatrolResolveIncident event,
     Emitter<PatrolState> emit,
   ) async {
+    final unit = state.currentPatrol;
     await _repository.updateIncidentStatus(
       event.incident.id,
       IncidentStatus.resuelto,
-      patrolId: state.currentPatrol.id,
-      patrolCode: state.currentPatrol.unitCode,
-      officerName: state.currentPatrol.officerName,
+      patrolId: unit.id,
+      patrolCode: unit.unitCode,
+      officerName: unit.officerName,
       resolutionNote: event.resolutionNote,
     );
 
-    emit(state.copyWith(
-      clearActiveDispatched: true,
-      clearSelectedIncident: true,
-      routePolyline: const [],
-      clearDistance: true,
-      clearEta: true,
-      isSirenActive: false,
-      statusMessage: 'Incidente concluido con reporte policial.',
-    ));
+    emit(
+      _withRouteTo(state, null).copyWith(
+        clearActiveDispatched: true,
+        clearSelectedIncident: true,
+        isSirenActive: false,
+        statusMessage: DispatchStrings.concluded,
+      ),
+    );
   }
 
-  void _onToggleSiren(
-    PatrolToggleSiren event,
-    Emitter<PatrolState> emit,
-  ) {
+  void _onToggleSiren(PatrolToggleSiren event, Emitter<PatrolState> emit) {
     emit(state.copyWith(isSirenActive: !state.isSirenActive));
   }
 
@@ -304,10 +312,15 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
     final updatedDismissed = Set<String>.from(state.dismissedAlertIds)
       ..add(event.incidentId);
 
-    emit(state.copyWith(
-      clearProximityAlert: true,
-      dismissedAlertIds: updatedDismissed,
-    ));
+    // Si hay otra alerta pendiente en el radar, se muestra a continuación
+    final withDismissed = state.copyWith(dismissedAlertIds: updatedDismissed);
+    final nextAlert = _proximityAlertFor(withDismissed, state.allIncidents);
+    emit(
+      withDismissed.copyWith(
+        proximityAlertIncident: nextAlert,
+        clearProximityAlert: nextAlert == null,
+      ),
+    );
   }
 
   Future<void> _onChangeDutyStatus(
@@ -316,7 +329,29 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
   ) async {
     await _repository.setPatrolStatus(state.currentPatrol.id, event.status);
     final updatedPatrol = state.currentPatrol.copyWith(status: event.status);
-    emit(state.copyWith(currentPatrol: updatedPatrol));
+    final updated = state.copyWith(currentPatrol: updatedPatrol);
+    final alert = _proximityAlertFor(updated, state.allIncidents);
+    emit(
+      updated.copyWith(
+        proximityAlertIncident: alert,
+        clearProximityAlert: alert == null,
+      ),
+    );
+  }
+
+  /// Cierra la ficha en pantalla. Un despacho propio en curso no se suelta:
+  /// sigue asignado a la unidad y solo se oculta la selección.
+  void _onClearActiveDispatch(
+    PatrolClearActiveDispatch event,
+    Emitter<PatrolState> emit,
+  ) {
+    final hasOngoingDispatch = state.activeDispatchedIncident != null;
+    emit(
+      _withRouteTo(
+        state,
+        hasOngoingDispatch ? state.activeDispatchedIncident : null,
+      ).copyWith(clearSelectedIncident: true, clearProximityAlert: true),
+    );
   }
 
   @override

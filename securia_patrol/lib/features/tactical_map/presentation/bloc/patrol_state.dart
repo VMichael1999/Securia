@@ -35,10 +35,25 @@ class PatrolState {
   /// Incidentes activos que requieren atención o están siendo atendidos
   List<IncidentModel> get activeIncidents {
     return allIncidents
-        .where((inc) =>
-            inc.status != IncidentStatus.resuelto &&
-            inc.status != IncidentStatus.cancelado)
+        .where(
+          (inc) =>
+              inc.status != IncidentStatus.resuelto &&
+              inc.status != IncidentStatus.cancelado,
+        )
         .toList();
+  }
+
+  /// Cola de atención: activos ordenados por urgencia y luego por cercanía
+  List<IncidentModel> get triageQueue {
+    double distanceOf(IncidentModel inc) =>
+        GeoUtils.calculateDistanceKm(currentPatrol.location, inc.location);
+
+    return activeIncidents..sort((a, b) {
+      final byUrgency = a.urgency.index.compareTo(b.urgency.index);
+      return byUrgency != 0
+          ? byUrgency
+          : distanceOf(a).compareTo(distanceOf(b));
+    });
   }
 
   /// Incidentes asignados o despachados a esta unidad policial
@@ -51,9 +66,11 @@ class PatrolState {
   /// Incidentes concluidos / resueltos durante el turno
   List<IncidentModel> get resolvedIncidents {
     return allIncidents
-        .where((inc) =>
-            inc.assignedPatrolId == currentPatrol.id &&
-            inc.status == IncidentStatus.resuelto)
+        .where(
+          (inc) =>
+              inc.assignedPatrolId == currentPatrol.id &&
+              inc.status == IncidentStatus.resuelto,
+        )
         .toList();
   }
 
@@ -83,32 +100,34 @@ class PatrolState {
     int? etaMinutes,
     bool clearEta = false,
     String? statusMessage,
-    bool clearStatusMessage = false,
   }) {
     return PatrolState(
       isLoading: isLoading ?? this.isLoading,
       currentPatrol: currentPatrol ?? this.currentPatrol,
       allIncidents: allIncidents ?? this.allIncidents,
-      selectedIncident: clearSelectedIncident
-          ? null
-          : (selectedIncident ?? this.selectedIncident),
-      activeDispatchedIncident: clearActiveDispatched
-          ? null
-          : (activeDispatchedIncident ?? this.activeDispatchedIncident),
-      proximityAlertIncident: clearProximityAlert
-          ? null
-          : (proximityAlertIncident ?? this.proximityAlertIncident),
+      selectedIncident:
+          clearSelectedIncident
+              ? null
+              : (selectedIncident ?? this.selectedIncident),
+      activeDispatchedIncident:
+          clearActiveDispatched
+              ? null
+              : (activeDispatchedIncident ?? this.activeDispatchedIncident),
+      proximityAlertIncident:
+          clearProximityAlert
+              ? null
+              : (proximityAlertIncident ?? this.proximityAlertIncident),
       dismissedAlertIds: dismissedAlertIds ?? this.dismissedAlertIds,
       isSirenActive: isSirenActive ?? this.isSirenActive,
       radarRadiusKm: radarRadiusKm ?? this.radarRadiusKm,
       routePolyline: routePolyline ?? this.routePolyline,
-      distanceToTargetMeters: clearDistance
-          ? null
-          : (distanceToTargetMeters ?? this.distanceToTargetMeters),
+      distanceToTargetMeters:
+          clearDistance
+              ? null
+              : (distanceToTargetMeters ?? this.distanceToTargetMeters),
       etaMinutes: clearEta ? null : (etaMinutes ?? this.etaMinutes),
-      statusMessage: clearStatusMessage
-          ? null
-          : (statusMessage ?? this.statusMessage),
+      // Mensaje de un solo uso: no se arrastra a los estados siguientes
+      statusMessage: statusMessage,
     );
   }
 }
