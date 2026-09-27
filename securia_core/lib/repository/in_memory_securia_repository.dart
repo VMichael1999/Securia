@@ -6,6 +6,7 @@ import '../models/geo_location.dart';
 import '../models/incident_model.dart';
 import '../models/patrol_unit_model.dart';
 import '../models/citizen_profile_model.dart';
+import '../models/citizen_auth.dart';
 import '../utils/geo_utils.dart';
 import 'i_securia_repository.dart';
 
@@ -31,7 +32,8 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
   final List<IncidentModel> _incidents = [];
   final List<PatrolUnitModel> _patrols = [];
 
-  late CitizenProfileModel _currentCitizen;
+  final List<CitizenProfileModel> _citizens = [];
+  CitizenProfileModel? _currentCitizen;
   late PatrolUnitModel _currentPatrol;
 
   InMemorySecuriaRepository._internal() {
@@ -41,8 +43,8 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
   void _seedInitialData() {
     final now = DateTime.now();
 
-    // Perfil del ciudadano activo
-    _currentCitizen = const CitizenProfileModel(
+    // Ciudadanos ya registrados (la sesión se inicia desde el login)
+    _citizens.add(const CitizenProfileModel(
       id: 'cit_001',
       fullName: 'Michael Anthony Valdiviezo',
       dni: '74829104',
@@ -52,7 +54,7 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
       emergencyContactPhone: '951 842 109',
       bloodType: 'O+',
       homeAddress: 'Av. Javier Prado Este 2450, San Borja',
-    );
+    ));
 
     // Patrullas en servicio activo
     _patrols.addAll([
@@ -280,6 +282,11 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
     required UrgencyLevel urgency,
     String? citizenId,
   }) async {
+    final citizen = _citizenById(citizenId) ?? _currentCitizen;
+    if (citizen == null) {
+      throw StateError('Se requiere un ciudadano con sesión iniciada');
+    }
+
     final incident = IncidentModel(
       id: 'inc_${_uuid.v4().substring(0, 8)}',
       type: type,
@@ -288,9 +295,9 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
       location: location,
       photoBase64: photoBase64,
       photoPath: photoPath,
-      citizenId: citizenId ?? _currentCitizen.id,
-      citizenName: _currentCitizen.fullName,
-      citizenPhone: _currentCitizen.phone,
+      citizenId: citizen.id,
+      citizenName: citizen.fullName,
+      citizenPhone: citizen.phone,
       timestamp: DateTime.now(),
       status: IncidentStatus.reportado,
       urgency: urgency,
@@ -411,7 +418,67 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
   }
 
   @override
-  CitizenProfileModel getCurrentCitizen() => _currentCitizen;
+  CitizenProfileModel? getCurrentCitizen() => _currentCitizen;
+
+  CitizenProfileModel? _citizenById(String? id) {
+    for (final c in _citizens) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
+  CitizenProfileModel? _citizenByDni(String dni) {
+    for (final c in _citizens) {
+      if (c.dni == dni.trim()) return c;
+    }
+    return null;
+  }
+
+  @override
+  Future<CitizenProfileModel> signInCitizen({
+    required String dni,
+    required String phone,
+  }) async {
+    final citizen = _citizenByDni(dni);
+    if (citizen == null) {
+      throw const CitizenAuthException(CitizenAuthError.notRegistered);
+    }
+    if (normalizePhone(citizen.phone) != normalizePhone(phone)) {
+      throw const CitizenAuthException(CitizenAuthError.phoneMismatch);
+    }
+    return _currentCitizen = citizen;
+  }
+
+  @override
+  Future<CitizenProfileModel> registerCitizen({
+    required String fullName,
+    required String dni,
+    required String phone,
+    String emergencyContactName = '',
+    String emergencyContactPhone = '',
+  }) async {
+    if (_citizenByDni(dni) != null) {
+      throw const CitizenAuthException(CitizenAuthError.alreadyRegistered);
+    }
+    final citizen = CitizenProfileModel(
+      id: 'cit_${_uuid.v4().substring(0, 8)}',
+      fullName: fullName.trim(),
+      dni: dni.trim(),
+      phone: phone.trim(),
+      email: '',
+      emergencyContactName: emergencyContactName.trim(),
+      emergencyContactPhone: emergencyContactPhone.trim(),
+      bloodType: '',
+      homeAddress: '',
+    );
+    _citizens.add(citizen);
+    return _currentCitizen = citizen;
+  }
+
+  @override
+  Future<void> signOutCitizen() async {
+    _currentCitizen = null;
+  }
 
   @override
   PatrolUnitModel getCurrentPatrol() => _currentPatrol;

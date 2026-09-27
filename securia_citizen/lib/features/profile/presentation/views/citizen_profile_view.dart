@@ -1,13 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:securia_core/securia_core.dart';
+import '../../../../app/injection.dart';
+import '../../../../app/strings/auth_strings.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../map/presentation/bloc/citizen_bloc.dart';
 import '../../../map/presentation/bloc/citizen_state.dart';
+import '../../../auth/presentation/views/citizen_login_view.dart';
 
 /// Pantalla de Perfil del Ciudadano con Datos de Emergencia y Centrales de Auxilio
 class CitizenProfileView extends StatelessWidget {
   const CitizenProfileView({super.key});
+
+  /// Iniciales para el avatar, tolerando espacios dobles o un solo nombre
+  static String initialsOf(String fullName) => fullName
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .take(2)
+      .map((w) => w[0].toUpperCase())
+      .join();
+
+  static String _orNotRegistered(String value) =>
+      value.trim().isEmpty ? AuthStrings.notRegistered : value;
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final navigator = Navigator.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(AuthStrings.logoutTitle),
+        content: const Text(AuthStrings.logoutBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(AuthStrings.logoutCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              AuthStrings.logoutConfirm,
+              style: TextStyle(
+                color: AppColors.emergencyRed,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await getIt<ISecuriaRepository>().signOutCitizen();
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const CitizenLoginView()),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +94,7 @@ class CitizenProfileView extends StatelessWidget {
                         radius: 30,
                         backgroundColor: AppColors.primaryNavy,
                         child: Text(
-                          profile.fullName.split(' ').map((w) => w[0]).take(2).join(),
+                          initialsOf(profile.fullName),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -114,11 +163,11 @@ class CitizenProfileView extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      _buildInfoRow('Grupo Sanguíneo', profile.bloodType),
+                      _buildInfoRow('Grupo Sanguíneo', _orNotRegistered(profile.bloodType)),
                       const Divider(height: 18, color: AppColors.border),
                       _buildInfoRow('Alergias Conocidas', 'Ninguna registrada'),
                       const Divider(height: 18, color: AppColors.border),
-                      _buildInfoRow('Dirección Registrada', profile.homeAddress),
+                      _buildInfoRow('Dirección Registrada', _orNotRegistered(profile.homeAddress)),
                     ],
                   ),
                 ),
@@ -150,11 +199,13 @@ class CitizenProfileView extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
+                          // Expanded: el nombre lo escribe el ciudadano y puede ser largo
+                          Expanded(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                profile.emergencyContactName,
+                                _orNotRegistered(profile.emergencyContactName),
                                 style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                               ),
                               const SizedBox(height: 2),
@@ -164,6 +215,8 @@ class CitizenProfileView extends StatelessWidget {
                               ),
                             ],
                           ),
+                          ),
+                          if (profile.emergencyContactPhone.trim().isNotEmpty)
                           ElevatedButton.icon(
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -217,6 +270,29 @@ class CitizenProfileView extends StatelessWidget {
                   ),
                 ),
 
+                const SizedBox(height: 20),
+
+                // 5. Cerrar sesión
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _confirmLogout(context),
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text(
+                      AuthStrings.logout,
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.emergencyRed,
+                      side: const BorderSide(color: AppColors.emergencyRed),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 32),
               ],
             ),
@@ -231,7 +307,15 @@ class CitizenProfileView extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primaryNavy)),
+        const SizedBox(width: 12),
+        // Flexible: una dirección larga baja de línea en vez de desbordar
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primaryNavy),
+          ),
+        ),
       ],
     );
   }

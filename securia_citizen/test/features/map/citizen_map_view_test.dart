@@ -29,7 +29,11 @@ void main() {
 
     // Se crean dentro del test para que sus streams corran en el reloj simulado
     repo = InMemorySecuriaRepository.fresh();
-    bloc = CitizenBloc(repository: repo);
+    final citizen = await repo.signInCitizen(
+      dni: '74829104',
+      phone: '984512893',
+    );
+    bloc = CitizenBloc(repository: repo, citizen: citizen);
     addTearDown(bloc.close);
 
     await pumpApp(

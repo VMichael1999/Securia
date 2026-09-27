@@ -1,20 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:securia_core/securia_core.dart';
+import '../../../../app/injection.dart';
+import '../../../../app/strings/auth_strings.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../home/presentation/views/citizen_home_shell.dart';
+import '../cubit/citizen_auth_cubit.dart';
+import '../widgets/auth_submit_button.dart';
+import '../widgets/auth_text_field.dart';
+import 'citizen_register_view.dart';
 
-/// Pantalla de Acceso para Ciudadanos con DNI y Teléfono
-class CitizenLoginView extends StatefulWidget {
+/// Pantalla de acceso: cualquier ciudadano ingresa con su DNI y celular
+class CitizenLoginView extends StatelessWidget {
   const CitizenLoginView({super.key});
 
   @override
-  State<CitizenLoginView> createState() => _CitizenLoginViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => CitizenAuthCubit(getIt<ISecuriaRepository>()),
+      child: const _CitizenLoginForm(),
+    );
+  }
 }
 
-class _CitizenLoginViewState extends State<CitizenLoginView> {
-  final _dniController = TextEditingController(text: '74829104');
-  final _phoneController = TextEditingController(text: '984 512 893');
-  bool _isLoading = false;
+class _CitizenLoginForm extends StatefulWidget {
+  const _CitizenLoginForm();
+
+  @override
+  State<_CitizenLoginForm> createState() => _CitizenLoginFormState();
+}
+
+class _CitizenLoginFormState extends State<_CitizenLoginForm> {
+  final _dniController = TextEditingController();
+  final _phoneController = TextEditingController();
+  String? _dniError;
+  String? _phoneError;
 
   @override
   void dispose() {
@@ -23,208 +44,194 @@ class _CitizenLoginViewState extends State<CitizenLoginView> {
     super.dispose();
   }
 
-  void _login() {
-    setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const CitizenHomeShell()),
-      );
+  void _submit() {
+    final dni = _dniController.text;
+    final phone = _phoneController.text;
+    setState(() {
+      _dniError =
+          CitizenAuthValidators.isValidDni(dni) ? null : AuthStrings.dniInvalid;
+      _phoneError =
+          CitizenAuthValidators.isValidPhone(phone)
+              ? null
+              : AuthStrings.phoneInvalid;
     });
+    if (_dniError != null || _phoneError != null) return;
+
+    FocusScope.of(context).unfocus();
+    context.read<CitizenAuthCubit>().signIn(dni: dni, phone: phone);
+  }
+
+  void _openHome(CitizenProfileModel citizen) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => CitizenHomeShell(citizen: citizen)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 30),
+    return BlocConsumer<CitizenAuthCubit, CitizenAuthState>(
+      listenWhen: (prev, curr) => curr.citizen != null && prev.citizen == null,
+      listener: (context, state) => _openHome(state.citizen!),
+      builder: (context, state) {
+        final error = state.error;
 
-              // Logo y Marca
-              Center(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.navyGradient,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryNavy.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 30),
+
+                  // Logo y Marca
+                  Center(
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.navyGradient,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primaryNavy.withValues(
+                                  alpha: 0.3,
+                                ),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.shield_rounded,
-                          color: Colors.white,
-                          size: 44,
+                          child: const Center(
+                            child: Icon(
+                              Icons.shield_rounded,
+                              color: AppColors.pureWhite,
+                              size: 44,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Securia',
+                          style: AppTypography.displayLarge.copyWith(
+                            color: AppColors.primaryNavy,
+                            fontSize: 32,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Red Ciudadana de Alerta y Seguridad',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+
+                  const SizedBox(height: 36),
+
+                  Text(
+                    AuthStrings.loginTitle,
+                    style: AppTypography.titleLarge.copyWith(fontSize: 22),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    AuthStrings.loginSubtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  AuthTextField(
+                    label: AuthStrings.dniLabel,
+                    hint: AuthStrings.dniHint,
+                    icon: Icons.badge_outlined,
+                    controller: _dniController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 8,
+                    digitsOnly: true,
+                    errorText: _dniError,
+                  ),
+                  const SizedBox(height: 14),
+                  AuthTextField(
+                    label: AuthStrings.phoneLabel,
+                    hint: AuthStrings.phoneHint,
+                    icon: Icons.phone_iphone_rounded,
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 9,
+                    digitsOnly: true,
+                    errorText: _phoneError,
+                    textInputAction: TextInputAction.done,
+                  ),
+
+                  if (error != null) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      'Securia',
-                      style: AppTypography.displayLarge.copyWith(
-                        color: AppColors.primaryNavy,
-                        fontSize: 32,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Red Ciudadana de Alerta y Seguridad',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    AuthErrorBanner(message: AuthStrings.error(error)),
                   ],
-                ),
-              ),
+                  const SizedBox(height: 24),
 
-              const SizedBox(height: 40),
-
-              Text(
-                'Iniciar Sesión',
-                style: AppTypography.titleLarge.copyWith(fontSize: 22),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Ingresa tu DNI para conectarte con la central de auxilio y patrullaje de tu distrito.',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Campo DNI
-              const Text(
-                'Documento Nacional de Identidad (DNI)',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _dniController,
-                keyboardType: TextInputType.number,
-                maxLength: 8,
-                decoration: InputDecoration(
-                  counterText: '',
-                  prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.primaryNavy),
-                  filled: true,
-                  fillColor: AppColors.surfaceMuted,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.border),
+                  AuthSubmitButton(
+                    label: AuthStrings.loginButton,
+                    isLoading: state.isLoading,
+                    onPressed: _submit,
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Campo Teléfono
-              const Text(
-                'Número Celular de Emergencia',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.phone_iphone_rounded, color: AppColors.primaryNavy),
-                  filled: true,
-                  fillColor: AppColors.surfaceMuted,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              // Botón Ingresar
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryNavy,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                        )
-                      : const Text(
-                          'Ingresar a Securia',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  const SizedBox(height: 8),
+                  AuthSwitchLink(
+                    question: AuthStrings.noAccount,
+                    action: AuthStrings.goToRegister,
+                    onTap:
+                        () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const CitizenRegisterView(),
+                          ),
                         ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              Center(
-                child: TextButton.icon(
-                  onPressed: _login,
-                  icon: const Icon(Icons.fingerprint_rounded, color: AppColors.accentBlue, size: 24),
-                  label: const Text(
-                    'Ingreso Rápido con Biometría',
-                    style: TextStyle(color: AppColors.accentBlue, fontWeight: FontWeight.bold),
                   ),
-                ),
-              ),
+                  const SizedBox(height: 20),
 
-              const SizedBox(height: 24),
-
-              // Banner informativo RENIEC
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.verified_user_outlined, color: AppColors.successEmerald, size: 22),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Conectado a la Central 105 y Serenazgo Municipal. En caso de peligro presiona el botón SOS.',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
-                      ),
+                  // Banner informativo RENIEC
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceMuted,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
                     ),
-                  ],
-                ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.verified_user_outlined,
+                          color: AppColors.successEmerald,
+                          size: 22,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Conectado a la Central 105 y Serenazgo Municipal. En caso de peligro presiona el botón SOS.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

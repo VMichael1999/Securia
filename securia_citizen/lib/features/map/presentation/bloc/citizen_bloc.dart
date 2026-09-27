@@ -8,9 +8,11 @@ class CitizenBloc extends Bloc<CitizenEvent, CitizenState> {
   final ISecuriaRepository _repository;
   StreamSubscription<List<IncidentModel>>? _incidentsSubscription;
 
-  CitizenBloc({required ISecuriaRepository repository})
-    : _repository = repository,
-      super(CitizenState(citizenProfile: repository.getCurrentCitizen())) {
+  CitizenBloc({
+    required ISecuriaRepository repository,
+    required CitizenProfileModel citizen,
+  }) : _repository = repository,
+       super(CitizenState(citizenProfile: citizen)) {
     on<CitizenStarted>(_onStarted);
     on<CitizenIncidentsUpdated>(_onIncidentsUpdated);
     on<CitizenFilterChanged>(_onFilterChanged);

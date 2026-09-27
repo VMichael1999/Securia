@@ -9,9 +9,14 @@ void main() {
   late CitizenBloc bloc;
   const location = GeoLocation(latitude: -12.0864, longitude: -77.0345);
 
-  setUp(() {
+  setUp(() async {
     repo = InMemorySecuriaRepository.fresh();
-    bloc = CitizenBloc(repository: repo)..add(const CitizenStarted());
+    final citizen = await repo.signInCitizen(
+      dni: '74829104',
+      phone: '984512893',
+    );
+    bloc = CitizenBloc(repository: repo, citizen: citizen)
+      ..add(const CitizenStarted());
   });
 
   tearDown(() => bloc.close());

@@ -3,6 +3,7 @@ import '../models/geo_location.dart';
 import '../models/incident_model.dart';
 import '../models/patrol_unit_model.dart';
 import '../models/citizen_profile_model.dart';
+import '../models/citizen_auth.dart';
 
 /// Contrato principal de persistencia y comunicación reactiva para Securia
 abstract class ISecuriaRepository {
@@ -70,8 +71,31 @@ abstract class ISecuriaRepository {
   /// Actualiza el estado de servicio de la patrulla
   Future<void> setPatrolStatus(String patrolId, PatrolStatus status);
 
-  /// Obtiene el perfil del ciudadano activo
-  CitizenProfileModel getCurrentCitizen();
+  /// Perfil del ciudadano con sesión iniciada, o `null` si no hay sesión
+  CitizenProfileModel? getCurrentCitizen();
+
+  /// Inicia sesión con DNI y celular.
+  ///
+  /// Lanza [CitizenAuthException] si el DNI no está registrado o el celular
+  /// no coincide.
+  Future<CitizenProfileModel> signInCitizen({
+    required String dni,
+    required String phone,
+  });
+
+  /// Registra un nuevo ciudadano y deja su sesión iniciada.
+  ///
+  /// Lanza [CitizenAuthException] si el DNI ya tiene cuenta.
+  Future<CitizenProfileModel> registerCitizen({
+    required String fullName,
+    required String dni,
+    required String phone,
+    String emergencyContactName,
+    String emergencyContactPhone,
+  });
+
+  /// Cierra la sesión del ciudadano actual
+  Future<void> signOutCitizen();
 
   /// Obtiene los datos de la patrulla policial activa
   PatrolUnitModel getCurrentPatrol();
