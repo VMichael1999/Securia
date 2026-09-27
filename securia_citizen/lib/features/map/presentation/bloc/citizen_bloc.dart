@@ -9,16 +9,14 @@ class CitizenBloc extends Bloc<CitizenEvent, CitizenState> {
   StreamSubscription<List<IncidentModel>>? _incidentsSubscription;
 
   CitizenBloc({required ISecuriaRepository repository})
-      : _repository = repository,
-        super(
-          CitizenState(
-            citizenProfile: repository.getCurrentCitizen(),
-          ),
-        ) {
+    : _repository = repository,
+      super(CitizenState(citizenProfile: repository.getCurrentCitizen())) {
     on<CitizenStarted>(_onStarted);
     on<CitizenIncidentsUpdated>(_onIncidentsUpdated);
     on<CitizenFilterChanged>(_onFilterChanged);
-    on<CitizenReportSosRequested>(_onReportSosRequested);
+    on<CitizenImmediateSosRequested>(_onImmediateSosRequested);
+    on<CitizenIncidentReportRequested>(_onIncidentReportRequested);
+    on<CitizenSosDetailsUpdated>(_onSosDetailsUpdated);
     on<CitizenCancelActiveSos>(_onCancelActiveSos);
     on<CitizenSelectIncidentForPreview>(_onSelectIncidentForPreview);
   }
@@ -27,7 +25,9 @@ class CitizenBloc extends Bloc<CitizenEvent, CitizenState> {
     emit(state.copyWith(isLoading: true));
 
     _incidentsSubscription?.cancel();
-    _incidentsSubscription = _repository.watchAllIncidents().listen((incidents) {
+    _incidentsSubscription = _repository.watchAllIncidents().listen((
+      incidents,
+    ) {
       add(CitizenIncidentsUpdated(incidents));
     });
   }
@@ -38,69 +38,116 @@ class CitizenBloc extends Bloc<CitizenEvent, CitizenState> {
   ) {
     // Buscar si el usuario actual tiene una alerta SOS activa en curso
     final myActiveSos = event.incidents.cast<IncidentModel?>().firstWhere(
-          (inc) =>
-              inc?.citizenId == state.citizenProfile.id &&
-              inc?.status != IncidentStatus.resuelto &&
-              inc?.status != IncidentStatus.cancelado,
-          orElse: () => null,
-        );
+      (inc) =>
+          inc?.citizenId == state.citizenProfile.id &&
+          inc?.status != IncidentStatus.resuelto &&
+          inc?.status != IncidentStatus.cancelado,
+      orElse: () => null,
+    );
 
     // Actualizar preview si estaba seleccionado
     IncidentModel? updatedPreview;
     if (state.selectedPreviewIncident != null) {
       updatedPreview = event.incidents.cast<IncidentModel?>().firstWhere(
-            (i) => i?.id == state.selectedPreviewIncident!.id,
-            orElse: () => null,
-          );
+        (i) => i?.id == state.selectedPreviewIncident!.id,
+        orElse: () => null,
+      );
     }
 
-    emit(state.copyWith(
-      isLoading: false,
-      allIncidents: event.incidents,
-      activeSosIncident: myActiveSos,
-      clearActiveSos: myActiveSos == null,
-      selectedPreviewIncident: updatedPreview,
-      clearPreviewIncident: updatedPreview == null,
-    ));
+    emit(
+      state.copyWith(
+        isLoading: false,
+        allIncidents: event.incidents,
+        activeSosIncident: myActiveSos,
+        clearActiveSos: myActiveSos == null,
+        selectedPreviewIncident: updatedPreview,
+        clearPreviewIncident: updatedPreview == null,
+      ),
+    );
   }
 
   void _onFilterChanged(
     CitizenFilterChanged event,
     Emitter<CitizenState> emit,
   ) {
-    emit(state.copyWith(
-      filterTodayOnly: event.filterTodayOnly ?? state.filterTodayOnly,
-      selectedCategory: event.selectedCategory,
-      clearCategory: event.clearCategory,
-    ));
+    emit(
+      state.copyWith(
+        filterTodayOnly: event.filterTodayOnly ?? state.filterTodayOnly,
+        selectedCategory: event.selectedCategory,
+        clearCategory: event.clearCategory,
+      ),
+    );
   }
 
-  Future<void> _onReportSosRequested(
-    CitizenReportSosRequested event,
+  Future<void> _onImmediateSosRequested(
+    CitizenImmediateSosRequested event,
     Emitter<CitizenState> emit,
-  ) async {
+  ) => _emitAlert(
+    emit,
+    type: IncidentType.emergenciaGeneral,
+    description: 'Alerta SOS inmediata emitida por el ciudadano.',
+    location: event.location,
+  );
+
+  Future<void> _onIncidentReportRequested(
+    CitizenIncidentReportRequested event,
+    Emitter<CitizenState> emit,
+  ) => _emitAlert(
+    emit,
+    type: event.type,
+    description:
+        event.description ?? '${event.type.title} reportado por el ciudadano.',
+    photoPath: event.photoPath,
+    location: event.location,
+  );
+
+  Future<void> _emitAlert(
+    Emitter<CitizenState> emit, {
+    required IncidentType type,
+    required String description,
+    required GeoLocation location,
+    String? photoPath,
+  }) async {
+    if (state.isReportingSos) return;
     emit(state.copyWith(isReportingSos: true));
     try {
       final incident = await _repository.createIncident(
-        type: event.type,
-        title: '${event.type.title} en progreso',
-        description: event.description,
-        location: event.location,
-        photoBase64: event.photoBase64,
-        photoPath: event.photoPath,
-        urgency: event.urgency,
+        type: type,
+        title: '${type.title} en progreso',
+        description: description,
+        location: location,
+        photoPath: photoPath,
+        urgency: type.defaultUrgency,
         citizenId: state.citizenProfile.id,
       );
 
-      emit(state.copyWith(
-        isReportingSos: false,
-        activeSosIncident: incident,
-      ));
+      emit(state.copyWith(isReportingSos: false, activeSosIncident: incident));
     } catch (e) {
-      emit(state.copyWith(
-        isReportingSos: false,
-        errorMessage: 'Error al emitir alerta SOS: $e',
-      ));
+      emit(
+        state.copyWith(
+          isReportingSos: false,
+          errorMessage: 'Error al emitir alerta SOS: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSosDetailsUpdated(
+    CitizenSosDetailsUpdated event,
+    Emitter<CitizenState> emit,
+  ) async {
+    try {
+      await _repository.updateIncidentDetails(
+        event.incidentId,
+        type: event.type,
+        urgency: event.type?.defaultUrgency,
+        description: event.description,
+        photoPath: event.photoPath,
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(errorMessage: 'No se pudieron enviar los detalles: $e'),
+      );
     }
   }
 
@@ -124,10 +171,12 @@ class CitizenBloc extends Bloc<CitizenEvent, CitizenState> {
     CitizenSelectIncidentForPreview event,
     Emitter<CitizenState> emit,
   ) {
-    emit(state.copyWith(
-      selectedPreviewIncident: event.incident,
-      clearPreviewIncident: event.incident == null,
-    ));
+    emit(
+      state.copyWith(
+        selectedPreviewIncident: event.incident,
+        clearPreviewIncident: event.incident == null,
+      ),
+    );
   }
 
   @override

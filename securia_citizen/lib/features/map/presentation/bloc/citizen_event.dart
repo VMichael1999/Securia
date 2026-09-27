@@ -25,21 +25,41 @@ class CitizenFilterChanged extends CitizenEvent {
   });
 }
 
-class CitizenReportSosRequested extends CitizenEvent {
-  final IncidentType type;
-  final String description;
-  final String? photoBase64;
-  final String? photoPath;
-  final UrgencyLevel urgency;
+/// SOS inmediato: se emite con un solo gesto, sin formulario.
+/// El tipo se puede precisar después con [CitizenSosDetailsUpdated].
+class CitizenImmediateSosRequested extends CitizenEvent {
   final GeoLocation location;
+  const CitizenImmediateSosRequested(this.location);
+}
 
-  const CitizenReportSosRequested({
+/// Reporte con detalle: tipo elegido y, opcionalmente, observación y foto.
+/// La urgencia se deriva del tipo ([IncidentType.defaultUrgency]).
+class CitizenIncidentReportRequested extends CitizenEvent {
+  final IncidentType type;
+  final GeoLocation location;
+  final String? description;
+  final String? photoPath;
+
+  const CitizenIncidentReportRequested({
     required this.type,
-    required this.description,
-    this.photoBase64,
-    this.photoPath,
-    required this.urgency,
     required this.location,
+    this.description,
+    this.photoPath,
+  });
+}
+
+/// Completa una alerta ya enviada con tipo, comentario o foto.
+class CitizenSosDetailsUpdated extends CitizenEvent {
+  final String incidentId;
+  final IncidentType? type;
+  final String? description;
+  final String? photoPath;
+
+  const CitizenSosDetailsUpdated(
+    this.incidentId, {
+    this.type,
+    this.description,
+    this.photoPath,
   });
 }
 
