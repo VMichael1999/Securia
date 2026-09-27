@@ -139,7 +139,7 @@ class _PatrolLoginViewState extends State<PatrolLoginView> {
                       style: PatrolTypography.titleLarge.copyWith(
                         fontSize: 24,
                         letterSpacing: 1.5,
-                        color: PatrolColors.policeBlue,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 4),

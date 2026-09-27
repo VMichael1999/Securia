@@ -42,23 +42,23 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
     return Scaffold(
       backgroundColor: PatrolColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: PatrolColors.surfaceCard,
         elevation: 0,
         title: Row(
           children: [
-            const Icon(Icons.shield_outlined, color: PatrolColors.policeBlue, size: 22),
+            const Icon(Icons.shield_outlined, color: PatrolColors.policeAccent, size: 22),
             const SizedBox(width: 8),
             Text(
               'Triage y Despacho Táctico',
-              style: PatrolTypography.titleLarge.copyWith(fontSize: 18),
+              style: PatrolTypography.titleLarge.copyWith(fontSize: 18, color: Colors.white),
             ),
           ],
         ),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: PatrolColors.policeBlue,
+          indicatorColor: PatrolColors.policeAccent,
           indicatorWeight: 3,
-          labelColor: PatrolColors.policeBlue,
+          labelColor: PatrolColors.policeAccent,
           unselectedLabelColor: PatrolColors.textMuted,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           tabs: const [
@@ -144,7 +144,7 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: PatrolColors.surfaceCard,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isAssignedToMe
@@ -154,7 +154,7 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: 0.25),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -182,11 +182,11 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
                       children: [
                         Text(
                           incident.type.title,
-                          style: PatrolTypography.titleMedium.copyWith(fontSize: 14.5),
+                          style: PatrolTypography.titleMedium.copyWith(fontSize: 14.5, color: Colors.white),
                         ),
                         Text(
                           DateFormat('dd/MM HH:mm').format(incident.timestamp),
-                          style: PatrolTypography.bodySmall.copyWith(fontSize: 11),
+                          style: PatrolTypography.bodySmall.copyWith(fontSize: 11, color: PatrolColors.textSecondary),
                         ),
                       ],
                     ),
@@ -243,20 +243,21 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
 
               const SizedBox(height: 12),
 
-              // Botones de acción rápida
+              // Botones de acción rápida con RELLENO SÓLIDO
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         context.read<PatrolBloc>().add(PatrolSelectIncident(incident));
                         widget.onSwitchTab?.call(0); // Cambiar al tab del mapa
                       },
                       icon: const Icon(Icons.map_outlined, size: 16),
                       label: const Text('Rastrear en Mapa'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: PatrolColors.policeBlue,
-                        side: const BorderSide(color: PatrolColors.policeBlue),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: PatrolColors.policeBlue,
+                        foregroundColor: Colors.white,
+                        elevation: 2,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
@@ -274,6 +275,7 @@ class _PatrolTriageViewState extends State<PatrolTriageView>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: PatrolColors.alertCrimson,
                           foregroundColor: Colors.white,
+                          elevation: 2,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),

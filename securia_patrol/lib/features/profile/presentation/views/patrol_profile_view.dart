@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:securia_core/securia_core.dart';
@@ -17,11 +18,11 @@ class PatrolProfileView extends StatelessWidget {
     return Scaffold(
       backgroundColor: PatrolColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: PatrolColors.surfaceCard,
         elevation: 0,
         title: Text(
           'Unidad y Guardia Operativa',
-          style: PatrolTypography.titleLarge.copyWith(fontSize: 18, color: PatrolColors.policeBlue),
+          style: PatrolTypography.titleLarge.copyWith(fontSize: 18, color: Colors.white),
         ),
         centerTitle: true,
       ),
@@ -38,12 +39,12 @@ class PatrolProfileView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: PatrolColors.surfaceCard,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: PatrolColors.surfaceBorder),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
@@ -105,51 +106,65 @@ class PatrolProfileView extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // 2. Selector de Estado de Servicio
+                // 2. Selector de Estado de Servicio (Cupertino)
                 Text(
                   'Estado de Servicio en Turno',
                   style: PatrolTypography.titleMedium.copyWith(fontSize: 14),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: PatrolColors.surfaceBorder),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
+                SizedBox(
+                  width: double.infinity,
+                  child: CupertinoSlidingSegmentedControl<PatrolStatus>(
+                    groupValue: patrol.status,
+                    backgroundColor: PatrolColors.surfaceCard,
+                    thumbColor: PatrolColors.policeAccent,
+                    children: {
+                      PatrolStatus.disponible: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        child: Text(
+                          'Disponible',
+                          style: TextStyle(
+                            color: patrol.status == PatrolStatus.disponible
+                                ? Colors.white
+                                : PatrolColors.textSecondary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      _buildStatusOption(
-                        context,
-                        label: 'Disponible',
-                        status: PatrolStatus.disponible,
-                        currentStatus: patrol.status,
-                        color: PatrolColors.successGreen,
+                      PatrolStatus.enRespuesta: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        child: Text(
+                          'En Respuesta',
+                          style: TextStyle(
+                            color: patrol.status == PatrolStatus.enRespuesta
+                                ? Colors.white
+                                : PatrolColors.textSecondary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
-                      _buildStatusOption(
-                        context,
-                        label: 'En Respuesta',
-                        status: PatrolStatus.enRespuesta,
-                        currentStatus: patrol.status,
-                        color: PatrolColors.alertCrimson,
+                      PatrolStatus.fueraServicio: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        child: Text(
+                          'Pausa / Fuera',
+                          style: TextStyle(
+                            color: patrol.status == PatrolStatus.fueraServicio
+                                ? Colors.white
+                                : PatrolColors.textSecondary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
-                      _buildStatusOption(
-                        context,
-                        label: 'Pausa / Fuera',
-                        status: PatrolStatus.fueraServicio,
-                        currentStatus: patrol.status,
-                        color: PatrolColors.textMuted,
-                      ),
-                    ],
+                    },
+                    onValueChanged: (newStatus) {
+                      if (newStatus != null) {
+                        context.read<PatrolBloc>().add(PatrolChangeDutyStatus(newStatus));
+                      }
+                    },
                   ),
                 ),
 
@@ -200,7 +215,7 @@ class PatrolProfileView extends StatelessWidget {
                         icon: Icons.alt_route_rounded,
                         value: '28.4 km',
                         label: 'Distancia Patrullada',
-                        accentColor: PatrolColors.infoBlue,
+                        accentColor: PatrolColors.policeLight,
                       ),
                     ),
                   ],
@@ -212,12 +227,12 @@ class PatrolProfileView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: PatrolColors.surfaceCard,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: PatrolColors.surfaceBorder),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
@@ -257,29 +272,31 @@ class PatrolProfileView extends StatelessWidget {
 
                 const SizedBox(height: 32),
 
-                // 5. Finalizar Turno / Salir
+                // 5. Finalizar Turno / Salir (Sólido Rojo con Letra Blanca)
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
-                  child: OutlinedButton.icon(
+                  height: 52,
+                  child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (_) => const PatrolLoginView()),
                         (route) => false,
                       );
                     },
-                    icon: const Icon(Icons.logout_rounded, color: PatrolColors.alertCrimson),
+                    icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
                     label: const Text(
                       'FINALIZAR GUARDIA / CERRAR SESIÓN',
                       style: TextStyle(
-                        color: PatrolColors.alertCrimson,
-                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
                         fontSize: 13,
                         letterSpacing: 0.5,
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: PatrolColors.alertCrimson),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: PatrolColors.alertCrimson,
+                      foregroundColor: Colors.white,
+                      elevation: 3,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -294,47 +311,6 @@ class PatrolProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusOption(
-    BuildContext context, {
-    required String label,
-    required PatrolStatus status,
-    required PatrolStatus currentStatus,
-    required Color color,
-  }) {
-    final isSelected = status == currentStatus;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          context.read<PatrolBloc>().add(PatrolChangeDutyStatus(status));
-        },
-        borderRadius: BorderRadius.circular(10),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.15) : const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected ? color : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? color : PatrolColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 11.5,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildMetricTile({
     required IconData icon,
     required String value,
@@ -344,12 +320,12 @@ class PatrolProfileView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: PatrolColors.surfaceCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: PatrolColors.surfaceBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

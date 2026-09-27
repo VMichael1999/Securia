@@ -41,25 +41,18 @@ class _PatrolShellViewState extends State<PatrolShellView> {
             children: views,
           ),
           bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
+            decoration: const BoxDecoration(
+              color: PatrolColors.surfaceCard,
               border: Border(
                 top: BorderSide(color: PatrolColors.surfaceBorder, width: 1.0),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, -3),
-                ),
-              ],
             ),
             child: BottomNavigationBar(
               currentIndex: _currentIndex,
               onTap: (index) => setState(() => _currentIndex = index),
-              backgroundColor: Colors.white,
+              backgroundColor: PatrolColors.surfaceCard,
               elevation: 0,
-              selectedItemColor: PatrolColors.policeBlue,
+              selectedItemColor: PatrolColors.policeAccent,
               unselectedItemColor: PatrolColors.textMuted,
               selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
               unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11.5),
