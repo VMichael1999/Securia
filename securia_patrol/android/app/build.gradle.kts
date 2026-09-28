@@ -1,3 +1,12 @@
+// Claves locales desde el .env de la raíz del monorepo (ver .env.example)
+val securiaEnv: Map<String, String> = rootProject.file("../../.env").let { file ->
+    if (!file.exists()) emptyMap()
+    else file.readLines()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+        .associate { it.substringBefore("=").trim() to it.substringAfter("=").trim() }
+}
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -28,6 +37,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["MAPS_API_KEY"] = securiaEnv["MAPS_API_KEY"] ?: ""
     }
 
     buildTypes {
