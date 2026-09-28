@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:securia_core/securia_core.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_typography.dart';
 import 'incident_report_fields.dart';
 
 /// Hoja inferior con una cuadrícula de tipos de incidente.
@@ -37,7 +38,9 @@ class IncidentTypeGridSheet extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(SecuriaRadius.sheet),
+        ),
       ),
       builder:
           (_) => IncidentTypeGridSheet(
@@ -55,28 +58,31 @@ class IncidentTypeGridSheet extends StatelessWidget {
     return SafeArea(
       top: false,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        padding: const EdgeInsets.fromLTRB(
+          SecuriaSpace.lg,
+          SecuriaSpace.sm,
+          SecuriaSpace.lg,
+          SecuriaSpace.md,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SheetHeader(title: title, subtitle: subtitle, leading: leading),
-            const SizedBox(height: 18),
+            const SizedBox(height: SecuriaSpace.md),
             IncidentTypeGrid(
               types: types,
               onSelected: (type) => Navigator.of(context).pop(type),
             ),
             if (skipLabel != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: SecuriaSpace.xs),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  skipLabel!,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.inkSecondary,
+                  minimumSize: const Size.fromHeight(SecuriaTouch.min),
                 ),
+                child: Text(skipLabel!, style: AppTypography.buttonLabel),
               ),
             ],
           ],

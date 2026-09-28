@@ -14,7 +14,10 @@ void main() {
   late InMemorySecuriaRepository repo;
   late CitizenBloc bloc;
 
-  setUpAll(mockPlatformPlugins);
+  setUpAll(() {
+    mockPlatformPlugins();
+    SecuriaMap.debugUseFakeMap = true;
+  });
 
   /// El pulso del SOS se repite siempre: pumpAndSettle nunca terminaría
   Future<void> settle(WidgetTester tester) async {
@@ -30,8 +33,8 @@ void main() {
     // Se crean dentro del test para que sus streams corran en el reloj simulado
     repo = InMemorySecuriaRepository.fresh();
     final citizen = await repo.signInCitizen(
-      dni: '74829104',
-      phone: '984512893',
+      dni: '12345678',
+      phone: '900000001',
     );
     bloc = CitizenBloc(repository: repo, citizen: citizen);
     addTearDown(bloc.close);
@@ -85,7 +88,7 @@ void main() {
 
       expect(find.text(SosStrings.followUpTitle), findsNothing);
       expect(find.text(SosStrings.trackerSearching), findsOneWidget);
-      expect(find.text(IncidentType.violencia.shortLabel), findsOneWidget);
+      expect(find.text(IncidentType.violencia.title), findsOneWidget);
       expect(find.text(SosStrings.sosLabel), findsNothing);
     },
   );
@@ -105,8 +108,12 @@ void main() {
     expect(find.text(SosStrings.reportSubtitle), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Se llevaron una mochila');
-    await tester.ensureVisible(find.text(SosStrings.reportSend));
-    await tester.tap(find.text(SosStrings.reportSend));
+    await tester.ensureVisible(
+      find.text(SosStrings.reportSendType(IncidentType.robo.shortLabel)),
+    );
+    await tester.tap(
+      find.text(SosStrings.reportSendType(IncidentType.robo.shortLabel)),
+    );
     await settle(tester);
 
     final sent = repo.getSnapshotIncidents().first;

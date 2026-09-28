@@ -39,7 +39,8 @@ void main() {
   testWidgets('Recién enviada indica que busca patrulla', (tester) async {
     await pumpTracker(tester, base);
     expect(find.text(SosStrings.trackerSearching), findsOneWidget);
-    expect(find.text(IncidentType.asalto.shortLabel), findsOneWidget);
+    expect(find.text(IncidentType.asalto.title), findsOneWidget);
+    expect(find.text(SosStrings.activeSince('00:00')), findsOneWidget);
   });
 
   testWidgets('En camino muestra la unidad y el tiempo estimado', (
@@ -50,14 +51,16 @@ void main() {
       base.copyWith(
         status: IncidentStatus.enCamino,
         assignedPatrolCode: 'PL-402',
+        assignedOfficerName: 'S3 C. Ramírez',
         assignedPatrolLocation: const GeoLocation(
           latitude: -12.0835,
           longitude: -77.0378,
         ),
       ),
     );
-    expect(find.text(SosStrings.trackerOnTheWay), findsOneWidget);
-    expect(find.textContaining('PL-402 · Llega en ~'), findsOneWidget);
+    // Lo más grande: en cuántos minutos llega la ayuda
+    expect(find.textContaining('La patrulla llega en'), findsOneWidget);
+    expect(find.textContaining('PL-402 · S3 C. Ramírez · a '), findsOneWidget);
   });
 
   testWidgets('En el lugar muestra al oficial interviniendo', (tester) async {

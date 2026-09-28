@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:securia_core/securia_core.dart';
 import '../../../../app/strings/sos_strings.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_typography.dart';
 import 'incident_report_fields.dart';
 
 /// Reporte armado por el ciudadano: tipo obligatorio, foto y observación opcionales
@@ -16,19 +17,28 @@ class IncidentReport {
 /// Hoja de reporte con detalle.
 ///
 /// A diferencia del SOS (que sale al instante), aquí el ciudadano elige qué
-/// pasa, puede adjuntar una foto y escribir una observación antes de enviar.
+/// pasa, puede adjuntar una foto y escribir lo que vio antes de enviar. El
+/// botón nombra lo que envía y abajo se ve con qué ubicación sale.
 class IncidentReportSheet extends StatefulWidget {
-  const IncidentReportSheet({super.key});
+  /// "Sale con tu ubicación actual · ±8 m"
+  final String locationCaption;
 
-  static Future<IncidentReport?> show(BuildContext context) {
+  const IncidentReportSheet({super.key, required this.locationCaption});
+
+  static Future<IncidentReport?> show(
+    BuildContext context, {
+    required String locationCaption,
+  }) {
     return showModalBottomSheet<IncidentReport>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(SecuriaRadius.sheet),
+        ),
       ),
-      builder: (_) => const IncidentReportSheet(),
+      builder: (_) => IncidentReportSheet(locationCaption: locationCaption),
     );
   }
 
@@ -63,13 +73,16 @@ class _IncidentReportSheetState extends State<IncidentReportSheet> {
     final type = _type;
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          padding: const EdgeInsets.fromLTRB(
+            SecuriaSpace.lg,
+            SecuriaSpace.sm,
+            SecuriaSpace.lg,
+            SecuriaSpace.md,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -78,50 +91,67 @@ class _IncidentReportSheetState extends State<IncidentReportSheet> {
                 title: SosStrings.reportTitle,
                 subtitle: SosStrings.reportSubtitle,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: SecuriaSpace.md),
               const _StepLabel(SosStrings.reportStepType),
-              const SizedBox(height: 10),
+              const SizedBox(height: SecuriaSpace.xs),
               IncidentTypeGrid(
                 types: IncidentType.reportTypes,
                 selected: type,
                 onSelected: (t) => setState(() => _type = t),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: SecuriaSpace.lg),
               const _StepLabel(SosStrings.reportStepPhoto),
-              const SizedBox(height: 10),
+              const SizedBox(height: SecuriaSpace.xs),
               EvidencePhotoField(
                 photoPath: _photoPath,
                 onChanged: (path) => setState(() => _photoPath = path),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: SecuriaSpace.lg),
               const _StepLabel(SosStrings.reportStepObservation),
-              const SizedBox(height: 10),
+              const SizedBox(height: SecuriaSpace.xs),
               ObservationField(controller: _observationController),
-              const SizedBox(height: 18),
+              const SizedBox(height: SecuriaSpace.lg),
               SizedBox(
                 height: 56,
-                child: ElevatedButton.icon(
+                child: FilledButton.icon(
                   onPressed: type == null ? null : () => _send(type),
                   icon: const Icon(Icons.send_rounded, size: 20),
                   label: Text(
                     type == null
                         ? SosStrings.reportChooseType
-                        : SosStrings.reportSend,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    ),
+                        : SosStrings.reportSendType(type.shortLabel),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.buttonLabel,
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryGreen,
-                    foregroundColor: AppColors.pureWhite,
-                    disabledBackgroundColor: AppColors.border,
-                    disabledForegroundColor: AppColors.textSecondary,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.ink,
+                    foregroundColor: AppColors.onColor,
+                    disabledBackgroundColor: AppColors.surfaceMuted,
+                    disabledForegroundColor: AppColors.inkMuted,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(SecuriaRadius.lg),
                     ),
                   ),
                 ),
+              ),
+              const SizedBox(height: SecuriaSpace.xs),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.my_location_rounded,
+                    size: 14,
+                    color: AppColors.inkMuted,
+                  ),
+                  const SizedBox(width: SecuriaSpace.xxs),
+                  Flexible(
+                    child: Text(
+                      widget.locationCaption,
+                      style: AppTypography.caption,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -137,13 +167,6 @@ class _StepLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13.5,
-        fontWeight: FontWeight.w800,
-        color: AppColors.textPrimary,
-      ),
-    );
+    return Text(text, style: AppTypography.titleMedium);
   }
 }
