@@ -1,55 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:securia_core/securia_core.dart';
 
-/// Paleta de colores tácticos y de alta visibilidad para Securia Patrullaje / PNP
+/// Paleta "Sereno" de la app policial (oscura, para usar de noche).
+///
+/// Cada color tiene un solo trabajo:
+/// - [action]: la acción principal y la ayuda en marcha (verde)
+/// - [critical]: urgencia crítica y alerta entrante (rojo). Nada más es rojo.
+/// - [high]: urgencia alta (ámbar)
+/// - Todo lo demás en negro, azul oscuro, blanco y grises.
 class PatrolColors {
   PatrolColors._();
 
-  // Fondos y Superficies Oscuras: Negro y Azul Oscuro
-  static const Color background = Color(0xFF000000); // Negro puro de fondo
-  static const Color surface = Color(0xFF050811); // Negro profundo
-  static const Color surfaceElevated = Color(0xFF0F1E38); // Azul oscuro elevado
-  static const Color surfaceCard = Color(0xFF0A1426); // Tarjetas en Azul oscuro sobre negro
-  static const Color surfaceBorder = Color(0xFF1E2F4D); // Borde azul oscuro sutil
+  // Superficies
+  static const Color background = Color(0xFF000000);
+  static const Color surface = Color(0xFF050811);
+  static const Color card = Color(0xFF0A1426);
+  static const Color elevated = Color(0xFF0F1E38);
+  static const Color border = Color(0xFF1E2F4D);
 
-  // Colores Primarios Policiales: Verde, Azul oscuro y Negro
-  static const Color tacticalNavy = Color(0xFF0F2447); // Azul oscuro institucional
-  static const Color tacticalBlue = Color(0xFF0F2447); // Azul oscuro
-  static const Color policeBlue = Color(0xFF0F2447); // Azul oscuro institucional
-  static const Color policeAccent = Color(0xFF10B981); // Verde de seguridad
-  static const Color policeLight = Color(0xFF34D399); // Verde claro de alta visibilidad
-  static const Color policeGreenDark = Color(0xFF064E3B); // Verde casi oscuro institucional
-  static const Color overlayScrim = Color(0xD9000000); // Velo negro para alertas a pantalla completa
-  static const Color cyanAccent = Color(0xFF10B981);
-  static const Color cyanGlow = Color(0x3310B981);
+  // Texto
+  static const Color ink = Color(0xFFFFFFFF);
+  static const Color inkSecondary = Color(0xFFDDE4EE);
+  static const Color inkMuted = Color(0xFF94A3B8);
 
-  // Estados de Alerta y Respuesta
-  static const Color alertCrimson = Color(0xFFEF4444); // Rojo sólido de emergencia
-  static const Color alertCrimsonGlow = Color(0x3DEF4444);
-  static const Color warningAmber = Color(0xFFF59E0B);
-  static const Color successGreen = Color(0xFF10B981); // Verde
-  static const Color infoBlue = Color(0xFF0F2447);
+  // Acción principal y ayuda en marcha
+  static const Color action = Color(0xFF34D399);
+  static const Color onAction = Color(0xFF02140D);
 
-  // Textos y Contraste de Alta Densidad: Blanco puro sobre superficies oscuras
-  static const Color textPrimary = Color(0xFFFFFFFF); // Blanco puro (nunca blanco sobre blanco)
-  static const Color textSecondary = Color(0xFF94A3B8); // Gris claro legible
-  static const Color textMuted = Color(0xFF64748B);
+  /// Fondo de una opción elegida (verde muy oscuro)
+  static const Color actionSoft = Color(0xFF0B2A20);
 
-  // Gradientes
-  static const LinearGradient tacticalGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF000000), // Negro
-      Color(0xFF0F2447), // Azul oscuro
-    ],
-  );
+  // Urgencia
+  /// Texto e íconos de urgencia crítica sobre fondos oscuros
+  static const Color critical = Color(0xFFEF4444);
 
-  static const LinearGradient policeSirenGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [
-      Color(0xFFEF4444),
-      Color(0xFF991B1B),
-    ],
-  );
+  /// Relleno de urgencia crítica: con texto blanco llega a 4.5:1
+  static const Color criticalFill = Color(0xFFDC2626);
+  static const Color onCritical = Color(0xFFFFFFFF);
+  static const Color high = Color(0xFFF59E0B);
+
+  /// Velo sobre el mapa detrás de la alerta entrante
+  static const Color scrim = Color(0xDB000000);
+
+  /// Color de marca y texto de una urgencia
+  static Color urgency(UrgencyLevel level) => switch (level) {
+    UrgencyLevel.critica => critical,
+    UrgencyLevel.alta => high,
+    UrgencyLevel.media || UrgencyLevel.baja => inkMuted,
+  };
 }
