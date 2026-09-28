@@ -3,13 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:securia_core/securia_core.dart';
 import '../../../../app/injection.dart';
 import '../../../../app/strings/auth_strings.dart';
+import '../../../../app/strings/profile_strings.dart';
+import '../../../../app/strings/sos_strings.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../app/utils/phone_launcher.dart';
+import '../../../auth/presentation/views/citizen_login_view.dart';
 import '../../../map/presentation/bloc/citizen_bloc.dart';
 import '../../../map/presentation/bloc/citizen_state.dart';
-import '../../../auth/presentation/views/citizen_login_view.dart';
 
-/// Pantalla de Perfil del Ciudadano con Datos de Emergencia y Centrales de Auxilio
+/// Perfil del ciudadano: quién es, a quién avisar y a qué números llamar
 class CitizenProfileView extends StatelessWidget {
   const CitizenProfileView({super.key});
 
@@ -24,6 +27,15 @@ class CitizenProfileView extends StatelessWidget {
   static String _orNotRegistered(String value) =>
       value.trim().isEmpty ? AuthStrings.notRegistered : value;
 
+  Future<void> _call(BuildContext context, String number) async {
+    final ok = await PhoneLauncher.call(number);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(SosStrings.callUnavailable)),
+      );
+    }
+  }
+
   Future<void> _confirmLogout(BuildContext context) async {
     final navigator = Navigator.of(context);
     final confirmed = await showDialog<bool>(
@@ -34,17 +46,16 @@ class CitizenProfileView extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.ink),
             child: const Text(AuthStrings.logoutCancel),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              AuthStrings.logoutConfirm,
-              style: TextStyle(
-                color: AppColors.emergencyRed,
-                fontWeight: FontWeight.w800,
-              ),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.ink,
+              foregroundColor: AppColors.onColor,
             ),
+            child: const Text(AuthStrings.logoutConfirm),
           ),
         ],
       ),
@@ -63,299 +74,234 @@ class CitizenProfileView extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Perfil y Seguridad',
-          style: AppTypography.titleLarge.copyWith(fontSize: 19),
-        ),
-        centerTitle: true,
+        centerTitle: false,
+        title: Text(ProfileStrings.title, style: AppTypography.headline),
       ),
       body: BlocBuilder<CitizenBloc, CitizenState>(
         builder: (context, state) {
           final profile = state.citizenProfile;
+          final hasContact = profile.emergencyContactPhone.trim().isNotEmpty;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Tarjeta de Usuario Ciudadano
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: AppColors.primaryNavy,
-                        child: Text(
-                          initialsOf(profile.fullName),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              profile.fullName,
-                              style: AppTypography.titleLarge.copyWith(fontSize: 17),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              'DNI: ${profile.dni} • ${profile.phone}',
-                              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                            ),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.successLight,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                '✓ Identidad Verificada RENIEC',
-                                style: TextStyle(
-                                  color: AppColors.successEmerald,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // 2. Datos Médicos de Emergencia
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.favorite_rounded, color: AppColors.emergencyRed, size: 20),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Ficha Médica para Rescate',
-                            style: AppTypography.titleMedium.copyWith(fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      _buildInfoRow('Grupo Sanguíneo', _orNotRegistered(profile.bloodType)),
-                      const Divider(height: 18, color: AppColors.border),
-                      _buildInfoRow('Alergias Conocidas', 'Ninguna registrada'),
-                      const Divider(height: 18, color: AppColors.border),
-                      _buildInfoRow('Dirección Registrada', _orNotRegistered(profile.homeAddress)),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // 3. Contacto de Emergencia
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.contact_phone_rounded, color: AppColors.accentBlue, size: 20),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Contacto de Emergencia',
-                            style: AppTypography.titleMedium.copyWith(fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Expanded: el nombre lo escribe el ciudadano y puede ser largo
-                          Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _orNotRegistered(profile.emergencyContactName),
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                profile.emergencyContactPhone,
-                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
-                              ),
-                            ],
-                          ),
-                          ),
-                          if (profile.emergencyContactPhone.trim().isNotEmpty)
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: AppColors.accentBlue,
-                                  content: Text('Llamando a ${profile.emergencyContactName}...'),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.phone, size: 16),
-                            label: const Text('Llamar'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accentBlue,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // 4. Centrales de Emergencia Nacional
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Líneas Gratuitas de Emergencia',
-                        style: AppTypography.titleMedium.copyWith(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildEmergencyPhoneRow(context, 'Policía Nacional del Perú', '105', Icons.local_police_rounded, AppColors.primaryBlue),
-                      const Divider(height: 16, color: AppColors.border),
-                      _buildEmergencyPhoneRow(context, 'Cuerpo General de Bomberos', '116', Icons.fire_truck_rounded, AppColors.emergencyRed),
-                      const Divider(height: 16, color: AppColors.border),
-                      _buildEmergencyPhoneRow(context, 'SAMU Ambulancia Médica', '106', Icons.medical_services_rounded, const Color(0xFFE11D48)),
-                      const Divider(height: 16, color: AppColors.border),
-                      _buildEmergencyPhoneRow(context, 'Central de Serenazgo y Vecinos', '318-5050', Icons.shield_rounded, AppColors.successEmerald),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // 5. Cerrar sesión
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _confirmLogout(context),
-                    icon: const Icon(Icons.logout_rounded),
-                    label: const Text(
-                      AuthStrings.logout,
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.emergencyRed,
-                      side: const BorderSide(color: AppColors.emergencyRed),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-              ],
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(
+              SecuriaSpace.md,
+              0,
+              SecuriaSpace.md,
+              SecuriaSpace.xxl,
             ),
+            children: [
+              // Identidad
+              _Card(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: AppColors.ink,
+                      child: Text(
+                        initialsOf(profile.fullName),
+                        style: AppTypography.titleMedium.copyWith(
+                          color: AppColors.onColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: SecuriaSpace.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(profile.fullName, style: AppTypography.titleMedium),
+                          Text(
+                            ProfileStrings.idLine(profile.dni, profile.phone),
+                            style: AppTypography.mono(size: 13, color: AppColors.inkSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Contacto de emergencia
+              _Card(
+                title: ProfileStrings.contactTitle,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _orNotRegistered(profile.emergencyContactName),
+                            style: AppTypography.label,
+                          ),
+                          if (hasContact)
+                            Text(
+                              profile.emergencyContactPhone,
+                              style: AppTypography.mono(size: 13, color: AppColors.inkSecondary),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (hasContact)
+                      _CallButton(
+                        label: ProfileStrings.call,
+                        onPressed: () => _call(context, profile.emergencyContactPhone),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Ficha médica: solo con consentimiento de datos de salud
+              _Card(
+                title: ProfileStrings.medicalTitle,
+                child: profile.hasHealthDataConsent
+                    ? Column(
+                        children: [
+                          _InfoRow(
+                            label: ProfileStrings.bloodType,
+                            value: _orNotRegistered(profile.bloodType),
+                          ),
+                          const Divider(height: SecuriaSpace.lg, color: AppColors.border),
+                          const _InfoRow(
+                            label: ProfileStrings.allergies,
+                            value: ProfileStrings.noAllergies,
+                          ),
+                        ],
+                      )
+                    : Text(ProfileStrings.medicalLocked, style: AppTypography.bodyMedium),
+              ),
+
+              _Card(
+                title: ProfileStrings.addressTitle,
+                child: Text(
+                  _orNotRegistered(profile.homeAddress),
+                  style: AppTypography.bodyLarge,
+                ),
+              ),
+
+              // Centrales de emergencia
+              _Card(
+                title: ProfileStrings.linesTitle,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(ProfileStrings.linesNote, style: AppTypography.caption),
+                    const SizedBox(height: SecuriaSpace.xs),
+                    for (final (name, number) in ProfileStrings.lines)
+                      Row(
+                        children: [
+                          Expanded(child: Text(name, style: AppTypography.bodyLarge)),
+                          Text(number, style: AppTypography.mono(size: 16)),
+                          const SizedBox(width: SecuriaSpace.xs),
+                          IconButton(
+                            tooltip: '${ProfileStrings.call} $number',
+                            onPressed: () => _call(context, number),
+                            icon: const Icon(Icons.call_rounded, color: AppColors.ink),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: SecuriaSpace.xs),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: () => _confirmLogout(context),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: Text(AuthStrings.logout, style: AppTypography.buttonLabel),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.ink,
+                    side: const BorderSide(color: AppColors.borderStrong),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(SecuriaRadius.lg),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
+}
 
-  Widget _buildInfoRow(String label, String value) {
+class _Card extends StatelessWidget {
+  final String? title;
+  final Widget child;
+
+  const _Card({this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: SecuriaSpace.sm),
+      padding: const EdgeInsets.all(SecuriaSpace.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(SecuriaRadius.lg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null) ...[
+            Text(title!, style: AppTypography.caption),
+            const SizedBox(height: SecuriaSpace.xs),
+          ],
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        const SizedBox(width: 12),
-        // Flexible: una dirección larga baja de línea en vez de desbordar
+        Text(label, style: AppTypography.bodyMedium),
+        const SizedBox(width: SecuriaSpace.sm),
+        // Flexible: un valor largo baja de línea en vez de desbordar
         Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primaryNavy),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Text(value, textAlign: TextAlign.end, style: AppTypography.label),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildEmergencyPhoneRow(
-    BuildContext context,
-    String name,
-    String number,
-    IconData icon,
-    Color color,
-  ) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 20),
+class _CallButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _CallButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.call_rounded, size: 18),
+      label: Text(label, style: AppTypography.buttonLabel),
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.ink,
+        foregroundColor: AppColors.onColor,
+        minimumSize: const Size(SecuriaTouch.min, SecuriaTouch.min),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SecuriaRadius.md),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-              Text('Marcar $number', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-        IconButton(
-          icon: Icon(Icons.call_outlined, color: color),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Llamando a $name ($number)...')),
-            );
-          },
-        ),
-      ],
+      ),
     );
   }
 }

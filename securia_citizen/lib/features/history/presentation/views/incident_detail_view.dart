@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:intl/intl.dart';
 import 'package:securia_core/securia_core.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -19,7 +18,6 @@ class IncidentDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateStr = DateFormat('EEEE dd \'de\' MMMM \'de\' yyyy', 'es').format(incident.timestamp);
     final timeStr = DateFormat('hh:mm a', 'es').format(incident.timestamp);
-    final incidentLatLng = incident.location.toLatLng();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -27,7 +25,7 @@ class IncidentDetailView extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryNavy),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -54,10 +52,10 @@ class IncidentDetailView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: incident.type.color.withValues(alpha: 0.12),
+                          color: _typeColor(incident.type).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Icon(incident.type.icon, color: incident.type.color, size: 30),
+                        child: Icon(incident.type.icon, color: _typeColor(incident.type), size: 30),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -76,7 +74,7 @@ class IncidentDetailView extends StatelessWidget {
                               'ID: ${incident.id.toUpperCase()}',
                               style: const TextStyle(
                                 fontSize: 11.5,
-                                color: AppColors.textMuted,
+                                color: AppColors.inkMuted,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -96,9 +94,9 @@ class IncidentDetailView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: incident.status.badgeColor.withValues(alpha: 0.12),
+                          color: _statusColor(incident.status).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: incident.status.badgeColor.withValues(alpha: 0.3)),
+                          border: Border.all(color: _statusColor(incident.status).withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -107,7 +105,7 @@ class IncidentDetailView extends StatelessWidget {
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                color: incident.status.badgeColor,
+                                color: _statusColor(incident.status),
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -115,7 +113,7 @@ class IncidentDetailView extends StatelessWidget {
                             Text(
                               incident.status.label,
                               style: TextStyle(
-                                color: incident.status.badgeColor,
+                                color: _statusColor(incident.status),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
@@ -126,13 +124,13 @@ class IncidentDetailView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: incident.urgency.color.withValues(alpha: 0.12),
+                          color: _urgencyColor(incident.urgency).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           'Urgencia: ${incident.urgency.label}',
                           style: TextStyle(
-                            color: incident.urgency.color,
+                            color: _urgencyColor(incident.urgency),
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -228,7 +226,7 @@ class IncidentDetailView extends StatelessWidget {
                           'Ubicación del Incidente',
                           style: AppTypography.titleMedium.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
                         ),
-                        const Icon(Icons.map_outlined, color: AppColors.accentBlue, size: 20),
+                        const Icon(Icons.map_outlined, color: AppColors.help, size: 20),
                       ],
                     ),
                   ),
@@ -238,40 +236,9 @@ class IncidentDetailView extends StatelessWidget {
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(0), bottom: Radius.circular(16)),
                     child: SizedBox(
                       height: 200,
-                      child: FlutterMap(
-                        options: MapOptions(
-                          initialCenter: incidentLatLng,
-                          initialZoom: 16.0,
-                          interactionOptions: const InteractionOptions(
-                            flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
-                          ),
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.securia.citizen',
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: incidentLatLng,
-                                width: 44,
-                                height: 44,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: incident.type.color,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 3),
-                                    boxShadow: const [
-                                      BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
-                                    ],
-                                  ),
-                                  child: Icon(incident.type.icon, color: Colors.white, size: 20),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      child: _DetailMiniMap(
+                        incident: incident,
+                        markerColor: _typeColor(incident.type),
                       ),
                     ),
                   ),
@@ -281,7 +248,7 @@ class IncidentDetailView extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on_rounded, color: AppColors.emergencyRed, size: 20),
+                        const Icon(Icons.location_on_rounded, color: AppColors.sos, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
@@ -295,7 +262,7 @@ class IncidentDetailView extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   'Ref: ${incident.location.reference}',
-                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                  style: const TextStyle(color: AppColors.inkSecondary, fontSize: 12),
                                 ),
                               ],
                             ],
@@ -330,7 +297,7 @@ class IncidentDetailView extends StatelessWidget {
                   Text(
                     incident.description,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textPrimary,
+                      color: AppColors.ink,
                       height: 1.45,
                     ),
                   ),
@@ -341,11 +308,11 @@ class IncidentDetailView extends StatelessWidget {
 
                   Row(
                     children: [
-                      const Icon(Icons.access_time_rounded, size: 16, color: AppColors.textSecondary),
+                      const Icon(Icons.access_time_rounded, size: 16, color: AppColors.inkSecondary),
                       const SizedBox(width: 6),
                       Text(
                         '$dateStr a las $timeStr',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontSize: 12, color: AppColors.inkSecondary, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -368,11 +335,11 @@ class IncidentDetailView extends StatelessWidget {
                               child: const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.photo_camera_rounded, size: 48, color: AppColors.textSecondary),
+                                  Icon(Icons.photo_camera_rounded, size: 48, color: AppColors.inkSecondary),
                                   SizedBox(height: 8),
                                   Text(
                                     'Evidencia visual capturada por cámara',
-                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                                    style: TextStyle(color: AppColors.inkSecondary, fontSize: 13, fontWeight: FontWeight.w600),
                                   ),
                                 ],
                               ),
@@ -403,8 +370,8 @@ class IncidentDetailView extends StatelessWidget {
     required bool isCurrent,
     bool isLast = false,
   }) {
-    Color dotColor = isDone ? AppColors.successEmerald : AppColors.borderSubtle;
-    if (isCurrent) dotColor = AppColors.accentBlue;
+    Color dotColor = isDone ? AppColors.help : AppColors.borderStrong;
+    if (isCurrent) dotColor = AppColors.help;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,7 +388,7 @@ class IncidentDetailView extends StatelessWidget {
                 boxShadow: isCurrent
                     ? [
                         BoxShadow(
-                          color: AppColors.accentBlue.withValues(alpha: 0.4),
+                          color: AppColors.help.withValues(alpha: 0.4),
                           blurRadius: 8,
                           spreadRadius: 2,
                         ),
@@ -436,7 +403,7 @@ class IncidentDetailView extends StatelessWidget {
               Container(
                 width: 2,
                 height: 38,
-                color: isDone ? AppColors.successEmerald.withValues(alpha: 0.5) : AppColors.border,
+                color: isDone ? AppColors.help.withValues(alpha: 0.5) : AppColors.border,
               ),
           ],
         ),
@@ -452,17 +419,97 @@ class IncidentDetailView extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: isCurrent || isDone ? FontWeight.w700 : FontWeight.w500,
                     fontSize: 13.5,
-                    color: isCurrent ? AppColors.primaryNavy : (isDone ? AppColors.primaryNavy : AppColors.textSecondary),
+                    color: isCurrent ? AppColors.ink : (isDone ? AppColors.ink : AppColors.inkSecondary),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: const TextStyle(fontSize: 12, color: AppColors.inkSecondary),
                 ),
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  // Colores del diseño original del detalle. Desde el rediseño ya no están
+  // en securia_core (los enums no llevan color), así que viven solo aquí.
+  static Color _typeColor(IncidentType type) => switch (type) {
+        IncidentType.emergenciaGeneral => const Color(0xFFDC2626),
+        IncidentType.asalto => const Color(0xFFDC2626),
+        IncidentType.robo => const Color(0xFFEA580C),
+        IncidentType.emergenciaMedica => const Color(0xFFE11D48),
+        IncidentType.accidenteTransito => const Color(0xFFD97706),
+        IncidentType.incendio => const Color(0xFFB91C1C),
+        IncidentType.sospechoso => const Color(0xFF4F46E5),
+        IncidentType.violencia => const Color(0xFF9F1239),
+        IncidentType.otro => const Color(0xFF475569),
+      };
+
+  static Color _statusColor(IncidentStatus status) => switch (status) {
+        IncidentStatus.reportado => const Color(0xFFEF4444),
+        IncidentStatus.asignado => const Color(0xFFF59E0B),
+        IncidentStatus.enCamino => const Color(0xFF3B82F6),
+        IncidentStatus.enLugar => const Color(0xFF8B5CF6),
+        IncidentStatus.resuelto => const Color(0xFF10B981),
+        IncidentStatus.cancelado => const Color(0xFF64748B),
+      };
+
+  static Color _urgencyColor(UrgencyLevel urgency) => switch (urgency) {
+        UrgencyLevel.critica => const Color(0xFFDC2626),
+        UrgencyLevel.alta => const Color(0xFFEA580C),
+        UrgencyLevel.media => const Color(0xFFF59E0B),
+        UrgencyLevel.baja => const Color(0xFF10B981),
+      };
+}
+
+/// Mini mapa del detalle sobre Google Maps, con el marcador del diseño
+/// original: círculo del color del tipo, borde blanco e ícono.
+class _DetailMiniMap extends StatefulWidget {
+  final IncidentModel incident;
+  final Color markerColor;
+
+  const _DetailMiniMap({required this.incident, required this.markerColor});
+
+  @override
+  State<_DetailMiniMap> createState() => _DetailMiniMapState();
+}
+
+class _DetailMiniMapState extends State<_DetailMiniMap> {
+  BitmapDescriptor? _icon;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_icon == null) _loadIcon();
+  }
+
+  Future<void> _loadIcon() async {
+    final icon = await MapMarkerIcons.circle(
+      icon: widget.incident.type.icon,
+      fill: widget.markerColor,
+      ring: Colors.white,
+      size: 44,
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+    );
+    if (mounted) setState(() => _icon = icon);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final incident = widget.incident;
+    return SecuriaMap(
+      center: incident.location,
+      zoom: 16,
+      markers: [
+        SecuriaMapMarker(
+          id: incident.id,
+          position: incident.location,
+          icon: _icon,
+          semanticLabel: incident.location.address,
         ),
       ],
     );
