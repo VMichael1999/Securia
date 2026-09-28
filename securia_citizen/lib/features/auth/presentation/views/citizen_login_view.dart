@@ -1,14 +1,18 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:securia_core/securia_core.dart';
 import '../../../../app/injection.dart';
 import '../../../../app/strings/auth_strings.dart';
+import '../../../../app/strings/sos_strings.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../app/utils/phone_launcher.dart';
 import '../../../home/presentation/views/citizen_home_shell.dart';
 import '../cubit/citizen_auth_cubit.dart';
 import '../widgets/auth_submit_button.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/brand_mark.dart';
 import 'citizen_register_view.dart';
 
 /// Pantalla de acceso: cualquier ciudadano ingresa con su DNI y celular
@@ -50,15 +54,22 @@ class _CitizenLoginFormState extends State<_CitizenLoginForm> {
     setState(() {
       _dniError =
           CitizenAuthValidators.isValidDni(dni) ? null : AuthStrings.dniInvalid;
-      _phoneError =
-          CitizenAuthValidators.isValidPhone(phone)
-              ? null
-              : AuthStrings.phoneInvalid;
+      _phoneError = CitizenAuthValidators.isValidPhone(phone)
+          ? null
+          : AuthStrings.phoneInvalid;
     });
     if (_dniError != null || _phoneError != null) return;
 
     FocusScope.of(context).unfocus();
     context.read<CitizenAuthCubit>().signIn(dni: dni, phone: phone);
+  }
+
+  /// Solo en desarrollo: entra con la cuenta ficticia de los datos semilla
+  void _signInDemo() {
+    context.read<CitizenAuthCubit>().signIn(
+          dni: InMemorySecuriaRepository.demoDni,
+          phone: InMemorySecuriaRepository.demoPhone,
+        );
   }
 
   void _openHome(CitizenProfileModel citizen) {
@@ -76,80 +87,24 @@ class _CitizenLoginFormState extends State<_CitizenLoginForm> {
         final error = state.error;
 
         return Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.background,
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              padding: const EdgeInsets.fromLTRB(
+                SecuriaSpace.xl,
+                SecuriaSpace.xl,
+                SecuriaSpace.xl,
+                SecuriaSpace.xl,
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 30),
-
-                  // Logo y Marca
-                  Center(
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            gradient: AppColors.navyGradient,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primaryNavy.withValues(
-                                  alpha: 0.3,
-                                ),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.shield_rounded,
-                              color: AppColors.pureWhite,
-                              size: 44,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Securia',
-                          style: AppTypography.displayLarge.copyWith(
-                            color: AppColors.primaryNavy,
-                            fontSize: 32,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Red Ciudadana de Alerta y Seguridad',
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 36),
-
-                  Text(
-                    AuthStrings.loginTitle,
-                    style: AppTypography.titleLarge.copyWith(fontSize: 22),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    AuthStrings.loginSubtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-
+                  const BrandMark(),
+                  const SizedBox(height: SecuriaSpace.xxl + SecuriaSpace.xs),
+                  Text(AuthStrings.loginTitle, style: AppTypography.headline),
+                  const SizedBox(height: SecuriaSpace.xxs),
+                  Text(AuthStrings.loginSubtitle, style: AppTypography.bodyMedium),
+                  const SizedBox(height: SecuriaSpace.xl),
                   AuthTextField(
                     label: AuthStrings.dniLabel,
                     hint: AuthStrings.dniHint,
@@ -160,7 +115,7 @@ class _CitizenLoginFormState extends State<_CitizenLoginForm> {
                     digitsOnly: true,
                     errorText: _dniError,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: SecuriaSpace.md),
                   AuthTextField(
                     label: AuthStrings.phoneLabel,
                     hint: AuthStrings.phoneHint,
@@ -172,55 +127,75 @@ class _CitizenLoginFormState extends State<_CitizenLoginForm> {
                     errorText: _phoneError,
                     textInputAction: TextInputAction.done,
                   ),
-
                   if (error != null) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: SecuriaSpace.md),
                     AuthErrorBanner(message: AuthStrings.error(error)),
                   ],
-                  const SizedBox(height: 24),
-
+                  const SizedBox(height: SecuriaSpace.xl),
                   AuthSubmitButton(
                     label: AuthStrings.loginButton,
                     isLoading: state.isLoading,
                     onPressed: _submit,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: SecuriaSpace.xs),
                   AuthSwitchLink(
                     question: AuthStrings.noAccount,
                     action: AuthStrings.goToRegister,
-                    onTap:
-                        () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const CitizenRegisterView(),
-                          ),
-                        ),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CitizenRegisterView(),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Banner informativo RENIEC
+                  if (kDebugMode) ...[
+                    const SizedBox(height: SecuriaSpace.xs),
+                    OutlinedButton(
+                      onPressed: state.isLoading ? null : _signInDemo,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.inkSecondary,
+                        side: const BorderSide(color: AppColors.borderStrong),
+                        minimumSize: const Size.fromHeight(SecuriaTouch.min),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(SecuriaRadius.md),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(AuthStrings.demoButton, style: AppTypography.buttonLabel),
+                          Text(AuthStrings.demoHint, style: AppTypography.caption),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: SecuriaSpace.xl),
+                  // Sin cuenta, la ayuda sigue a una llamada de distancia
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.fromLTRB(
+                      SecuriaSpace.md,
+                      SecuriaSpace.xs,
+                      SecuriaSpace.xs,
+                      SecuriaSpace.xs,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceMuted,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(SecuriaRadius.md),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(
-                          Icons.verified_user_outlined,
-                          color: AppColors.successEmerald,
-                          size: 22,
-                        ),
-                        SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Conectado a la Central 105 y Serenazgo Municipal. En caso de peligro presiona el botón SOS.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              height: 1.3,
-                            ),
+                            AuthStrings.emergencyNote,
+                            style: AppTypography.bodySmall,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () =>
+                              PhoneLauncher.call(SosStrings.policeNumber),
+                          icon: const Icon(Icons.call_rounded, size: 18),
+                          label: Text(SosStrings.call105, style: AppTypography.buttonLabel),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.ink,
+                            minimumSize: const Size(SecuriaTouch.min, SecuriaTouch.min),
                           ),
                         ),
                       ],

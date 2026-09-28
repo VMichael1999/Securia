@@ -23,6 +23,8 @@ class CitizenAuthCubit extends Cubit<CitizenAuthState> {
     required String fullName,
     required String dni,
     required String phone,
+    required DateTime dataConsentAt,
+    DateTime? healthDataConsentAt,
     String emergencyContactName = '',
     String emergencyContactPhone = '',
   }) => _run(
@@ -30,6 +32,8 @@ class CitizenAuthCubit extends Cubit<CitizenAuthState> {
       fullName: fullName,
       dni: dni,
       phone: phone,
+      dataConsentAt: dataConsentAt,
+      healthDataConsentAt: healthDataConsentAt,
       emergencyContactName: emergencyContactName,
       emergencyContactPhone: emergencyContactPhone,
     ),

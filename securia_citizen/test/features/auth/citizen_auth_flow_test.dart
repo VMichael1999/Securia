@@ -6,9 +6,11 @@ import 'package:securia_citizen/app/securia_citizen_app.dart';
 import 'package:securia_citizen/app/strings/auth_strings.dart';
 import 'package:securia_citizen/app/strings/sos_strings.dart';
 import 'package:securia_citizen/features/auth/presentation/cubit/citizen_auth_cubit.dart';
+import 'package:securia_citizen/features/map/data/location_service.dart';
 import 'package:securia_citizen/features/profile/presentation/views/citizen_profile_view.dart';
 import 'package:securia_core/securia_core.dart';
 
+import '../../helpers/fake_location_service.dart';
 import '../../helpers/fake_platform.dart';
 
 void main() {
@@ -16,6 +18,7 @@ void main() {
 
   setUpAll(() async {
     mockPlatformPlugins();
+    SecuriaMap.debugUseFakeMap = true;
     // main() inicializa las fechas en español; el test arranca la app sin main()
     await initializeDateFormatting('es');
   });
@@ -38,6 +41,7 @@ void main() {
     await getIt.reset();
     repo = InMemorySecuriaRepository.fresh();
     getIt.registerSingleton<ISecuriaRepository>(repo);
+    getIt.registerSingleton<LocationService>(FakeLocationService());
 
     await tester.pumpWidget(const SecuriaCitizenApp());
     await settle(tester);
@@ -65,9 +69,9 @@ void main() {
 
   group('Validadores', () {
     test('DNI de 8 dígitos y celular de 9', () {
-      expect(CitizenAuthValidators.isValidDni('74829104'), isTrue);
+      expect(CitizenAuthValidators.isValidDni('12345678'), isTrue);
       expect(CitizenAuthValidators.isValidDni('7482910'), isFalse);
-      expect(CitizenAuthValidators.isValidPhone('984 512 893'), isTrue);
+      expect(CitizenAuthValidators.isValidPhone('900 000 001'), isTrue);
       expect(CitizenAuthValidators.isValidPhone('98451289'), isFalse);
       expect(CitizenAuthValidators.isValidFullName('Rosa Quispe'), isTrue);
       expect(CitizenAuthValidators.isValidFullName('Rosa'), isFalse);
@@ -85,7 +89,7 @@ void main() {
     await pumpApp(tester);
 
     expect(find.text(AuthStrings.loginTitle), findsOneWidget);
-    expect(find.text('74829104'), findsNothing);
+    expect(find.text('12345678'), findsNothing);
   });
 
   testWidgets('Datos con formato inválido muestran el error en el campo', (
@@ -111,7 +115,7 @@ void main() {
 
   testWidgets('Celular que no coincide no deja ingresar', (tester) async {
     await pumpApp(tester);
-    await login(tester, '74829104', '911222333');
+    await login(tester, '12345678', '911222333');
 
     expect(
       find.text(AuthStrings.error(CitizenAuthError.phoneMismatch)),
@@ -124,10 +128,10 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
-    await login(tester, '74829104', '984512893');
+    await login(tester, '12345678', '900000001');
 
     expect(find.text(SosStrings.sosLabel), findsOneWidget);
-    expect(repo.getCurrentCitizen()?.dni, '74829104');
+    expect(repo.getCurrentCitizen()?.dni, '12345678');
   });
 
   testWidgets('Un ciudadano nuevo se registra y entra directo al mapa', (
@@ -139,10 +143,44 @@ void main() {
     await tester.enterText(field(AuthStrings.fullNameLabel), 'Rosa Quispe');
     await tester.enterText(field(AuthStrings.dniLabel), '45678912');
     await tester.enterText(field(AuthStrings.phoneLabel), '987654321');
+    await tapText(tester, AuthStrings.dataConsent);
     await tapText(tester, AuthStrings.registerButton);
 
     expect(find.text(SosStrings.sosLabel), findsOneWidget);
     expect(repo.getCurrentCitizen()?.fullName, 'Rosa Quispe');
+  });
+
+  testWidgets('Sin aceptar el tratamiento de datos no se crea la cuenta', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tapText(tester, AuthStrings.goToRegister);
+
+    await tester.enterText(field(AuthStrings.fullNameLabel), 'Rosa Quispe');
+    await tester.enterText(field(AuthStrings.dniLabel), '45678912');
+    await tester.enterText(field(AuthStrings.phoneLabel), '987654321');
+    await tapText(tester, AuthStrings.registerButton);
+
+    expect(find.text(AuthStrings.consentRequired), findsOneWidget);
+    expect(repo.getCurrentCitizen(), isNull);
+  });
+
+  testWidgets('El consentimiento de salud es aparte y queda registrado', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tapText(tester, AuthStrings.goToRegister);
+
+    await tester.enterText(field(AuthStrings.fullNameLabel), 'Rosa Quispe');
+    await tester.enterText(field(AuthStrings.dniLabel), '45678912');
+    await tester.enterText(field(AuthStrings.phoneLabel), '987654321');
+    await tapText(tester, AuthStrings.healthConsent);
+    await tapText(tester, AuthStrings.dataConsent);
+    await tapText(tester, AuthStrings.registerButton);
+
+    final citizen = repo.getCurrentCitizen();
+    expect(citizen?.dataConsentAt, isNotNull);
+    expect(citizen?.hasHealthDataConsent, isTrue);
   });
 
   testWidgets('Registrar un DNI existente avisa que ya tiene cuenta', (
@@ -152,8 +190,9 @@ void main() {
     await tapText(tester, AuthStrings.goToRegister);
 
     await tester.enterText(field(AuthStrings.fullNameLabel), 'Otra Persona');
-    await tester.enterText(field(AuthStrings.dniLabel), '74829104');
+    await tester.enterText(field(AuthStrings.dniLabel), '12345678');
     await tester.enterText(field(AuthStrings.phoneLabel), '900111222');
+    await tapText(tester, AuthStrings.dataConsent);
     await tapText(tester, AuthStrings.registerButton);
 
     expect(
@@ -166,9 +205,9 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
-    await login(tester, '74829104', '984512893');
+    await login(tester, '12345678', '900000001');
 
-    await tapText(tester, 'Mi Perfil');
+    await tapText(tester, 'Perfil');
     await tapText(tester, AuthStrings.logout);
     expect(find.text(AuthStrings.logoutTitle), findsOneWidget);
 
