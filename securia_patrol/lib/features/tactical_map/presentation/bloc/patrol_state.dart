@@ -1,4 +1,3 @@
-import 'package:latlong2/latlong.dart';
 import 'package:securia_core/securia_core.dart';
 
 class PatrolState {
@@ -11,10 +10,23 @@ class PatrolState {
   final Set<String> dismissedAlertIds;
   final bool isSirenActive;
   final double radarRadiusKm;
-  final List<LatLng> routePolyline;
+  final List<GeoLocation> routePolyline;
   final double? distanceToTargetMeters;
   final int? etaMinutes;
   final String? statusMessage;
+
+  /// Inicio de la guardia (para el tiempo restante del turno)
+  final DateTime? shiftStartedAt;
+
+  /// Horas del despacho en curso, para el acta de cierre
+  final DateTime? dispatchAcceptedAt;
+  final DateTime? dispatchArrivedAt;
+
+  /// Tiempo entre aceptar y llegar de cada intervención del turno
+  final List<Duration> arrivalTimes;
+
+  /// Intervenciones concluidas en esta guardia (no las de turnos anteriores)
+  final int shiftConcludedCount;
 
   const PatrolState({
     this.isLoading = false,
@@ -30,7 +42,26 @@ class PatrolState {
     this.distanceToTargetMeters,
     this.etaMinutes,
     this.statusMessage,
+    this.shiftStartedAt,
+    this.dispatchAcceptedAt,
+    this.dispatchArrivedAt,
+    this.arrivalTimes = const [],
+    this.shiftConcludedCount = 0,
   });
+
+  /// Duración de una guardia
+  static const Duration shiftLength = Duration(hours: 12);
+
+  /// Llegada promedio del turno, o `null` si aún no hubo llegadas
+  Duration? get averageArrival {
+    if (arrivalTimes.isEmpty) return null;
+    final total = arrivalTimes.fold<int>(0, (sum, d) => sum + d.inSeconds);
+    return Duration(seconds: total ~/ arrivalTimes.length);
+  }
+
+  /// Alertas que esperan una unidad (las que se pueden aceptar)
+  int get pendingCount =>
+      allIncidents.where((i) => i.status == IncidentStatus.reportado).length;
 
   /// Incidentes activos que requieren atención o están siendo atendidos
   List<IncidentModel> get activeIncidents {
@@ -94,12 +125,18 @@ class PatrolState {
     Set<String>? dismissedAlertIds,
     bool? isSirenActive,
     double? radarRadiusKm,
-    List<LatLng>? routePolyline,
+    List<GeoLocation>? routePolyline,
     double? distanceToTargetMeters,
     bool clearDistance = false,
     int? etaMinutes,
     bool clearEta = false,
     String? statusMessage,
+    DateTime? shiftStartedAt,
+    DateTime? dispatchAcceptedAt,
+    DateTime? dispatchArrivedAt,
+    bool clearDispatchTimes = false,
+    List<Duration>? arrivalTimes,
+    int? shiftConcludedCount,
   }) {
     return PatrolState(
       isLoading: isLoading ?? this.isLoading,
@@ -128,6 +165,17 @@ class PatrolState {
       etaMinutes: clearEta ? null : (etaMinutes ?? this.etaMinutes),
       // Mensaje de un solo uso: no se arrastra a los estados siguientes
       statusMessage: statusMessage,
+      shiftStartedAt: shiftStartedAt ?? this.shiftStartedAt,
+      dispatchAcceptedAt:
+          clearDispatchTimes
+              ? null
+              : (dispatchAcceptedAt ?? this.dispatchAcceptedAt),
+      dispatchArrivedAt:
+          clearDispatchTimes
+              ? null
+              : (dispatchArrivedAt ?? this.dispatchArrivedAt),
+      arrivalTimes: arrivalTimes ?? this.arrivalTimes,
+      shiftConcludedCount: shiftConcludedCount ?? this.shiftConcludedCount,
     );
   }
 }

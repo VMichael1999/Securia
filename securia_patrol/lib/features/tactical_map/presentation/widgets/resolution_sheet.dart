@@ -1,25 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:securia_core/securia_core.dart';
 import '../../../../app/strings/dispatch_strings.dart';
 import '../../../../app/theme/patrol_colors.dart';
 import '../../../../app/theme/patrol_typography.dart';
+import '../../../../app/widgets/dispatch_flow.dart';
+import '../../../../app/widgets/patrol_buttons.dart';
 import '../models/resolution_outcome.dart';
 
 /// Cierre rápido de la intervención: se elige el resultado y listo.
 ///
-/// La nota es opcional; el resultado genera por sí solo el texto del acta.
+/// Los tiempos del caso van arriba (es lo que el acta necesita y el agente no
+/// tiene que escribir). La nota es opcional.
 class ResolutionSheet extends StatefulWidget {
-  const ResolutionSheet({super.key});
+  final DateTime? acceptedAt;
+  final DateTime? arrivedAt;
+  final DateTime? now;
+
+  const ResolutionSheet({super.key, this.acceptedAt, this.arrivedAt, this.now});
 
   /// Devuelve la nota de cierre, o `null` si el agente no concluyó
-  static Future<String?> show(BuildContext context) {
+  static Future<String?> show(
+    BuildContext context, {
+    DateTime? acceptedAt,
+    DateTime? arrivedAt,
+    DateTime? now,
+  }) {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: PatrolColors.surfaceCard,
+      useSafeArea: true,
+      backgroundColor: PatrolColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(SecuriaRadius.xl),
+        ),
       ),
-      builder: (_) => const ResolutionSheet(),
+      builder:
+          (_) => ResolutionSheet(
+            acceptedAt: acceptedAt,
+            arrivedAt: arrivedAt,
+            now: now,
+          ),
     );
   }
 
@@ -40,107 +62,157 @@ class _ResolutionSheetState extends State<ResolutionSheet> {
   @override
   Widget build(BuildContext context) {
     final outcome = _outcome;
+    final accepted = widget.acceptedAt;
+    final arrived = widget.arrivedAt;
+    final now = widget.now ?? DateTime.now();
+    final hhmm = DateFormat('HH:mm');
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        12,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: PatrolColors.surfaceBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              DispatchStrings.resolveTitle,
-              style: PatrolTypography.titleLarge.copyWith(
-                color: PatrolColors.textPrimary,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final option in ResolutionOutcome.values)
-                  _OutcomeChip(
-                    outcome: option,
-                    selected: option == outcome,
-                    onTap: () => setState(() => _outcome = option),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          SecuriaSpace.md,
+          SecuriaSpace.sm,
+          SecuriaSpace.md,
+          SecuriaSpace.md,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: PatrolColors.border,
+                    borderRadius: BorderRadius.circular(3),
                   ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _noteController,
-              maxLines: 2,
-              style: const TextStyle(
-                color: PatrolColors.textPrimary,
-                fontSize: 14,
-              ),
-              decoration: InputDecoration(
-                hintText: DispatchStrings.resolveNoteHint,
-                hintStyle: const TextStyle(color: PatrolColors.textMuted),
-                filled: true,
-                fillColor: PatrolColors.surfaceElevated,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 58,
-              child: ElevatedButton(
+              const SizedBox(height: SecuriaSpace.md),
+              const DispatchFlow(current: 3),
+              const SizedBox(height: SecuriaSpace.xs),
+              Text(
+                DispatchStrings.resolveTitle,
+                style: PatrolTypography.headline,
+              ),
+              if (accepted != null) ...[
+                const SizedBox(height: SecuriaSpace.xs),
+                Wrap(
+                  spacing: SecuriaSpace.md,
+                  runSpacing: SecuriaSpace.xxs,
+                  children: [
+                    _TimelineItem(
+                      DispatchStrings.resolveAccepted,
+                      hhmm.format(accepted),
+                    ),
+                    if (arrived != null)
+                      _TimelineItem(
+                        DispatchStrings.resolveArrived,
+                        hhmm.format(arrived),
+                      ),
+                    _TimelineItem(
+                      DispatchStrings.resolveDuration,
+                      DispatchStrings.minutes(
+                        now.difference(accepted).inMinutes,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: SecuriaSpace.md),
+              for (final option in ResolutionOutcome.values) ...[
+                _OutcomeOption(
+                  outcome: option,
+                  selected: option == outcome,
+                  onTap: () => setState(() => _outcome = option),
+                ),
+                const SizedBox(height: SecuriaSpace.xs - 1),
+              ],
+              const SizedBox(height: SecuriaSpace.xs),
+              TextField(
+                controller: _noteController,
+                maxLines: 2,
+                textCapitalization: TextCapitalization.sentences,
+                style: PatrolTypography.bodyMedium,
+                decoration: InputDecoration(
+                  hintText: DispatchStrings.resolveNoteHint,
+                  hintStyle: PatrolTypography.bodyMedium.copyWith(
+                    color: PatrolColors.inkMuted,
+                  ),
+                  filled: true,
+                  fillColor: PatrolColors.card,
+                  contentPadding: const EdgeInsets.all(SecuriaSpace.md - 2),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(SecuriaRadius.md),
+                    borderSide: const BorderSide(
+                      color: PatrolColors.border,
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(SecuriaRadius.md),
+                    borderSide: const BorderSide(
+                      color: PatrolColors.inkMuted,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: SecuriaSpace.md),
+              PrimaryActionButton(
+                label: DispatchStrings.resolveConfirm,
+                semanticHint:
+                    outcome == null ? DispatchStrings.resolveChooseFirst : null,
                 onPressed:
                     outcome == null
                         ? null
                         : () => Navigator.of(
                           context,
                         ).pop(outcome.buildNote(_noteController.text)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: PatrolColors.policeAccent,
-                  foregroundColor: PatrolColors.background,
-                  disabledBackgroundColor: PatrolColors.surfaceBorder,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text(
-                  DispatchStrings.resolveConfirm,
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _OutcomeChip extends StatelessWidget {
+class _TimelineItem extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _TimelineItem(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = PatrolTypography.mono(
+      size: 12,
+      color: PatrolColors.inkMuted,
+      weight: FontWeight.w500,
+    );
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: '$label ', style: muted),
+          TextSpan(text: value, style: PatrolTypography.mono(size: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Opción de resultado de 64 px, grande para tocar con guantes
+class _OutcomeOption extends StatelessWidget {
   final ResolutionOutcome outcome;
   final bool selected;
   final VoidCallback onTap;
 
-  const _OutcomeChip({
+  const _OutcomeOption({
     required this.outcome,
     required this.selected,
     required this.onTap,
@@ -148,46 +220,58 @@ class _OutcomeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        selected ? PatrolColors.policeAccent : PatrolColors.textSecondary;
+    final radius = BorderRadius.circular(SecuriaRadius.md + 2);
 
-    return Material(
-      color:
-          selected
-              ? PatrolColors.policeGreenDark
-              : PatrolColors.surfaceElevated,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color:
-                  selected
-                      ? PatrolColors.policeAccent
-                      : PatrolColors.surfaceBorder,
-            ),
+    return Semantics(
+      inMutuallyExclusiveGroup: true,
+      checked: selected,
+      button: true,
+      label: outcome.label,
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? PatrolColors.actionSoft : PatrolColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+            color: selected ? PatrolColors.action : PatrolColors.border,
+            width: 1.5,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(outcome.icon, size: 18, color: color),
-              const SizedBox(width: 8),
-              Text(
-                outcome.label,
-                style: TextStyle(
-                  color:
-                      selected
-                          ? PatrolColors.textPrimary
-                          : PatrolColors.textSecondary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                ),
+        ),
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: SecuriaTouch.patrol),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: SecuriaSpace.md - 2,
+                vertical: SecuriaSpace.xs,
               ),
-            ],
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: SecuriaMotion.of(context, SecuriaMotion.fast),
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color:
+                            selected
+                                ? PatrolColors.action
+                                : PatrolColors.inkMuted,
+                        width: selected ? 7 : 2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: SecuriaSpace.sm),
+                  Expanded(
+                    child: Text(outcome.label, style: PatrolTypography.label),
+                  ),
+                  Icon(outcome.icon, size: 20, color: PatrolColors.inkMuted),
+                ],
+              ),
+            ),
           ),
         ),
       ),
