@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../app/strings/shift_strings.dart';
 import '../../../../app/theme/patrol_colors.dart';
-import '../../../profile/presentation/views/patrol_profile_view.dart';
+import '../../../../app/theme/patrol_typography.dart';
+import '../../../queue/presentation/views/dispatch_queue_view.dart';
+import '../../../shift/presentation/views/shift_view.dart';
 import '../../../tactical_map/presentation/bloc/patrol_bloc.dart';
 import '../../../tactical_map/presentation/bloc/patrol_state.dart';
 import '../../../tactical_map/presentation/views/tactical_map_view.dart';
-import '../../../triage/presentation/views/patrol_triage_view.dart';
 
-/// Shell principal de navegación para la aplicación de Patrullaje Securia
+/// Navegación principal de la unidad: Mapa, Cola y Turno
 class PatrolShellView extends StatefulWidget {
   const PatrolShellView({super.key});
 
@@ -16,84 +18,67 @@ class PatrolShellView extends StatefulWidget {
 }
 
 class _PatrolShellViewState extends State<PatrolShellView> {
-  int _currentIndex = 0;
-
-  void _onSwitchTab(int index) {
-    setState(() => _currentIndex = index);
-  }
+  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PatrolBloc, PatrolState>(
-      builder: (context, state) {
-        final activeCount = state.activeIncidents.length;
-
-        final views = [
+    return Scaffold(
+      backgroundColor: PatrolColors.background,
+      body: IndexedStack(
+        index: _index,
+        children: [
           const TacticalMapView(),
-          PatrolTriageView(onSwitchTab: _onSwitchTab),
-          const PatrolProfileView(),
-        ];
-
-        return Scaffold(
-          backgroundColor: PatrolColors.background,
-          body: IndexedStack(
-            index: _currentIndex,
-            children: views,
-          ),
-          bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              color: PatrolColors.surfaceCard,
-              border: Border(
-                top: BorderSide(color: PatrolColors.surfaceBorder, width: 1.0),
+          DispatchQueueView(onOpenMap: () => setState(() => _index = 0)),
+          const ShiftView(),
+        ],
+      ),
+      bottomNavigationBar: BlocSelector<PatrolBloc, PatrolState, int>(
+        selector: (state) => state.pendingCount,
+        builder: (context, pending) {
+          Widget queueIcon(IconData icon) => Badge(
+            isLabelVisible: pending > 0,
+            backgroundColor: PatrolColors.criticalFill,
+            textColor: PatrolColors.onCritical,
+            label: Text(
+              '$pending',
+              style: PatrolTypography.mono(
+                size: 11,
+                color: PatrolColors.onCritical,
               ),
             ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              backgroundColor: PatrolColors.surfaceCard,
-              elevation: 0,
-              selectedItemColor: PatrolColors.policeAccent,
-              unselectedItemColor: PatrolColors.textMuted,
-              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11.5),
-              type: BottomNavigationBarType.fixed,
-              items: [
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.radar_outlined),
-                  activeIcon: Icon(Icons.radar_rounded),
-                  label: 'Mapa Táctico',
+            child: Icon(icon),
+          );
+
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: PatrolColors.border)),
+            ),
+            child: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              destinations: [
+                const NavigationDestination(
+                  icon: Icon(Icons.map_outlined),
+                  selectedIcon: Icon(Icons.map_rounded),
+                  label: ShiftStrings.navMap,
                 ),
-                BottomNavigationBarItem(
-                  icon: Badge(
-                    isLabelVisible: activeCount > 0,
-                    label: Text(
-                      '$activeCount',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
-                    ),
-                    backgroundColor: PatrolColors.alertCrimson,
-                    child: const Icon(Icons.format_list_bulleted_outlined),
-                  ),
-                  activeIcon: Badge(
-                    isLabelVisible: activeCount > 0,
-                    label: Text(
-                      '$activeCount',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
-                    ),
-                    backgroundColor: PatrolColors.alertCrimson,
-                    child: const Icon(Icons.format_list_bulleted_rounded),
-                  ),
-                  label: 'Despacho',
+                NavigationDestination(
+                  icon: queueIcon(Icons.format_list_bulleted_rounded),
+                  selectedIcon: queueIcon(Icons.format_list_bulleted_rounded),
+                  label: ShiftStrings.navQueue,
+                  tooltip:
+                      pending > 0 ? ShiftStrings.queueBadge(pending) : null,
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.local_police_outlined),
-                  activeIcon: Icon(Icons.local_police_rounded),
-                  label: 'Mi Guardia',
+                const NavigationDestination(
+                  icon: Icon(Icons.badge_outlined),
+                  selectedIcon: Icon(Icons.badge_rounded),
+                  label: ShiftStrings.navShift,
                 ),
               ],
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
