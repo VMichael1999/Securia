@@ -85,11 +85,15 @@ abstract class ISecuriaRepository {
 
   /// Registra un nuevo ciudadano y deja su sesión iniciada.
   ///
+  /// Requiere el consentimiento de tratamiento de datos ([dataConsentAt]);
+  /// el de datos de salud es aparte y opcional.
   /// Lanza [CitizenAuthException] si el DNI ya tiene cuenta.
   Future<CitizenProfileModel> registerCitizen({
     required String fullName,
     required String dni,
     required String phone,
+    required DateTime dataConsentAt,
+    DateTime? healthDataConsentAt,
     String emergencyContactName,
     String emergencyContactPhone,
   });

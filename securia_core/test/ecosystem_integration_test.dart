@@ -13,10 +13,10 @@ void main() {
     () async {
       // 1. El ciudadano inicia sesión con su DNI y celular
       final citizen = await repository.signInCitizen(
-        dni: '74829104',
-        phone: '984512893',
+        dni: '12345678',
+        phone: '900000001',
       );
-      expect(citizen.fullName, contains('Michael Anthony'));
+      expect(citizen.fullName, contains('Ana Lucía'));
 
       // 2. Ciudadano emite alerta SOS en tiempo real
       final incident = await repository.createIncident(

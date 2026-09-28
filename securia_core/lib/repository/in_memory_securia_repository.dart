@@ -17,6 +17,11 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
 
   factory InMemorySecuriaRepository() => _instance;
 
+  /// Cuenta de demostración. Todos los datos semilla son ficticios.
+  static const String demoDni = '12345678';
+  static const String demoPhone = '900 000 001';
+  static const String demoFullName = 'Ana Lucía Torres';
+
   /// Instancia aislada con los datos semilla, para que cada test parta limpio
   @visibleForTesting
   factory InMemorySecuriaRepository.fresh() =>
@@ -44,16 +49,18 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
     final now = DateTime.now();
 
     // Ciudadanos ya registrados (la sesión se inicia desde el login)
-    _citizens.add(const CitizenProfileModel(
+    _citizens.add(CitizenProfileModel(
       id: 'cit_001',
-      fullName: 'Michael Anthony Valdiviezo',
-      dni: '74829104',
-      phone: '984 512 893',
-      email: 'mvaldiviezo@securia.pe',
-      emergencyContactName: 'Elena Valdiviezo (Madre)',
-      emergencyContactPhone: '951 842 109',
+      fullName: InMemorySecuriaRepository.demoFullName,
+      dni: InMemorySecuriaRepository.demoDni,
+      phone: InMemorySecuriaRepository.demoPhone,
+      email: 'ana.torres@ejemplo.pe',
+      emergencyContactName: 'Carlos Torres (hermano)',
+      emergencyContactPhone: '900 000 002',
       bloodType: 'O+',
-      homeAddress: 'Av. Javier Prado Este 2450, San Borja',
+      homeAddress: 'Calle Las Begonias 441, San Isidro',
+      dataConsentAt: DateTime(2026, 1, 15),
+      healthDataConsentAt: DateTime(2026, 1, 15),
     ));
 
     // Patrullas en servicio activo
@@ -61,8 +68,8 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
       const PatrolUnitModel(
         id: 'patrol_01',
         unitCode: 'PL-402',
-        officerName: 'Suboficial R. Mendoza',
-        phone: '993 102 481',
+        officerName: 'S3 C. Ramírez',
+        phone: '900 000 101',
         location: GeoLocation(
           latitude: -12.0835,
           longitude: -77.0378,
@@ -74,8 +81,8 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
       const PatrolUnitModel(
         id: 'patrol_02',
         unitCode: 'MOTO-08',
-        officerName: 'Técnico C. Paredes',
-        phone: '981 742 590',
+        officerName: 'S2 L. Paredes',
+        phone: '900 000 102',
         location: GeoLocation(
           latitude: -12.0912,
           longitude: -77.0315,
@@ -87,8 +94,8 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
       const PatrolUnitModel(
         id: 'patrol_03',
         unitCode: 'SERENAZGO-14',
-        officerName: 'Agente M. Alarcón',
-        phone: '974 610 289',
+        officerName: 'Sereno M. Alarcón',
+        phone: '900 000 103',
         location: GeoLocation(
           latitude: -12.0790,
           longitude: -77.0280,
@@ -118,7 +125,7 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
         ),
         citizenId: 'cit_004',
         citizenName: 'Lucía Ramos',
-        citizenPhone: '962 330 781',
+        citizenPhone: '900 000 004',
         timestamp: now.subtract(const Duration(minutes: 18)),
         status: IncidentStatus.reportado,
         urgency: UrgencyLevel.critica,
@@ -138,13 +145,13 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
         ),
         citizenId: 'cit_002',
         citizenName: 'Carlos Santillán',
-        citizenPhone: '977 123 456',
+        citizenPhone: '900 000 005',
         timestamp: now.subtract(const Duration(minutes: 42)),
         status: IncidentStatus.enCamino,
         urgency: UrgencyLevel.alta,
         assignedPatrolId: 'patrol_02',
         assignedPatrolCode: 'MOTO-08',
-        assignedOfficerName: 'Técnico C. Paredes',
+        assignedOfficerName: 'S2 L. Paredes',
         assignedPatrolLocation: const GeoLocation(
           latitude: -12.0912,
           longitude: -77.0315,
@@ -169,14 +176,14 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
           address: 'Calle Morelli cuadra 4, San Borja',
         ),
         citizenId: 'cit_001',
-        citizenName: 'Michael Anthony Valdiviezo',
-        citizenPhone: '984 512 893',
+        citizenName: InMemorySecuriaRepository.demoFullName,
+        citizenPhone: InMemorySecuriaRepository.demoPhone,
         timestamp: now.subtract(const Duration(days: 1, hours: 3)),
         status: IncidentStatus.resuelto,
         urgency: UrgencyLevel.media,
         assignedPatrolId: 'patrol_01',
         assignedPatrolCode: 'PL-402',
-        assignedOfficerName: 'Suboficial R. Mendoza',
+        assignedOfficerName: 'S3 C. Ramírez',
         notes: [
           'Patrulla verificó ocupantes; se realizó control de identidad y se dispersó la zona.'
         ],
@@ -196,13 +203,13 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
         ),
         citizenId: 'cit_003',
         citizenName: 'Andrea Torres',
-        citizenPhone: '966 842 110',
+        citizenPhone: '900 000 006',
         timestamp: now.subtract(const Duration(days: 2, hours: 5)),
         status: IncidentStatus.resuelto,
         urgency: UrgencyLevel.media,
         assignedPatrolId: 'patrol_03',
         assignedPatrolCode: 'SERENAZGO-14',
-        assignedOfficerName: 'Agente M. Alarcón',
+        assignedOfficerName: 'Sereno M. Alarcón',
         notes: ['Tránsito fluido restablecido en 15 minutos.'],
       ),
     ]);
@@ -454,6 +461,8 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
     required String fullName,
     required String dni,
     required String phone,
+    required DateTime dataConsentAt,
+    DateTime? healthDataConsentAt,
     String emergencyContactName = '',
     String emergencyContactPhone = '',
   }) async {
@@ -468,8 +477,8 @@ class InMemorySecuriaRepository implements ISecuriaRepository {
       email: '',
       emergencyContactName: emergencyContactName.trim(),
       emergencyContactPhone: emergencyContactPhone.trim(),
-      bloodType: '',
-      homeAddress: '',
+      dataConsentAt: dataConsentAt,
+      healthDataConsentAt: healthDataConsentAt,
     );
     _citizens.add(citizen);
     return _currentCitizen = citizen;

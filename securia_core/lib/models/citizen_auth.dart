@@ -20,5 +20,5 @@ class CitizenAuthException implements Exception {
   String toString() => 'CitizenAuthException(${error.name})';
 }
 
-/// Normaliza un celular a solo dígitos para comparar ("984 512 893" == "984512893")
+/// Normaliza un celular a solo dígitos para comparar ("900 000 001" == "900000001")
 String normalizePhone(String phone) => phone.replaceAll(RegExp(r'\D'), '');
