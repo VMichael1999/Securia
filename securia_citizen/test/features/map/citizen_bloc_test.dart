@@ -12,8 +12,8 @@ void main() {
   setUp(() async {
     repo = InMemorySecuriaRepository.fresh();
     final citizen = await repo.signInCitizen(
-      dni: '74829104',
-      phone: '984512893',
+      dni: '12345678',
+      phone: '900000001',
     );
     bloc = CitizenBloc(repository: repo, citizen: citizen)
       ..add(const CitizenStarted());

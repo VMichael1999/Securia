@@ -1,19 +1,25 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:securia_core/securia_core.dart';
+import '../../data/location_service.dart';
 import 'citizen_event.dart';
 import 'citizen_state.dart';
 
 class CitizenBloc extends Bloc<CitizenEvent, CitizenState> {
   final ISecuriaRepository _repository;
+  final LocationService? _locationService;
   StreamSubscription<List<IncidentModel>>? _incidentsSubscription;
+  StreamSubscription<LocationReading>? _locationSubscription;
 
   CitizenBloc({
     required ISecuriaRepository repository,
     required CitizenProfileModel citizen,
+    LocationService? locationService,
   }) : _repository = repository,
+       _locationService = locationService,
        super(CitizenState(citizenProfile: citizen)) {
     on<CitizenStarted>(_onStarted);
+    on<CitizenLocationChanged>(_onLocationChanged);
     on<CitizenIncidentsUpdated>(_onIncidentsUpdated);
     on<CitizenFilterChanged>(_onFilterChanged);
     on<CitizenImmediateSosRequested>(_onImmediateSosRequested);
@@ -32,6 +38,26 @@ class CitizenBloc extends Bloc<CitizenEvent, CitizenState> {
     ) {
       add(CitizenIncidentsUpdated(incidents));
     });
+
+    _locationSubscription?.cancel();
+    _locationSubscription = _locationService?.watch().listen(
+      (reading) => add(CitizenLocationChanged(reading)),
+    );
+  }
+
+  void _onLocationChanged(
+    CitizenLocationChanged event,
+    Emitter<CitizenState> emit,
+  ) {
+    final reading = event.reading;
+    emit(
+      state.copyWith(
+        locationStatus: reading.status,
+        userLocation: reading.location,
+        locationAccuracyMeters: reading.accuracyMeters,
+        locationTakenAt: reading.takenAt,
+      ),
+    );
   }
 
   void _onIncidentsUpdated(
@@ -184,6 +210,7 @@ class CitizenBloc extends Bloc<CitizenEvent, CitizenState> {
   @override
   Future<void> close() {
     _incidentsSubscription?.cancel();
+    _locationSubscription?.cancel();
     return super.close();
   }
 }
