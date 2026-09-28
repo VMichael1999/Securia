@@ -4,6 +4,11 @@ export 'models/incident_model.dart';
 export 'models/patrol_unit_model.dart';
 export 'models/citizen_profile_model.dart';
 export 'models/citizen_auth.dart';
+export 'design/securia_tokens.dart';
+export 'design/map/map_marker_icons.dart';
+export 'design/map/securia_map.dart';
+export 'package:google_maps_flutter/google_maps_flutter.dart'
+    show BitmapDescriptor;
 export 'utils/geo_utils.dart';
 export 'repository/i_securia_repository.dart';
 export 'repository/in_memory_securia_repository.dart';
