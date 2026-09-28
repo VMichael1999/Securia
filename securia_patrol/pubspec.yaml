@@ -34,11 +34,8 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  flutter_map: ^8.3.2
-  latlong2: ^0.10.1
   flutter_bloc: ^9.1.1
   get_it: ^9.3.0
-  google_fonts: ^6.3.2
   uuid: ^4.6.0
   intl: ^0.20.2
   image_picker: ^1.2.1
@@ -46,6 +43,9 @@ dependencies:
   securia_core:
     path: ../securia_core
   url_launcher: ^6.3.2
+  google_maps_flutter: ^2.14.0
+  flutter_animate: ^4.5.2
+  animations: ^2.1.0
 
 dev_dependencies:
   flutter_test:

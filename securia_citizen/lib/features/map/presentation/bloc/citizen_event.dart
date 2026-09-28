@@ -1,4 +1,5 @@
 import 'package:securia_core/securia_core.dart';
+import '../../data/location_service.dart';
 
 abstract class CitizenEvent {
   const CitizenEvent();
@@ -71,4 +72,10 @@ class CitizenCancelActiveSos extends CitizenEvent {
 class CitizenSelectIncidentForPreview extends CitizenEvent {
   final IncidentModel? incident;
   const CitizenSelectIncidentForPreview(this.incident);
+}
+
+/// Nueva lectura del GPS (o cambio de permiso / estado del GPS)
+class CitizenLocationChanged extends CitizenEvent {
+  final LocationReading reading;
+  const CitizenLocationChanged(this.reading);
 }

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:securia_core/securia_core.dart';
 import '../../../../app/strings/dispatch_strings.dart';
 import 'patrol_event.dart';
@@ -8,7 +7,7 @@ import 'patrol_state.dart';
 
 /// Ruta, distancia y tiempo de llegada desde la patrulla hasta un objetivo
 class _RouteInfo {
-  final List<LatLng> polyline;
+  final List<GeoLocation> polyline;
   final double distanceMeters;
   final int etaMinutes;
 
@@ -17,10 +16,7 @@ class _RouteInfo {
   factory _RouteInfo.between(GeoLocation from, GeoLocation to) {
     final distKm = GeoUtils.calculateDistanceKm(from, to);
     return _RouteInfo(
-      GeoUtils.generateUrbanPolyline(
-        from,
-        to,
-      ).map((g) => g.toLatLng()).toList(),
+      GeoUtils.generateUrbanPolyline(from, to),
       distKm * 1000.0,
       GeoUtils.estimateEtaMinutes(
         distKm,
@@ -32,12 +28,17 @@ class _RouteInfo {
 
 class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
   final ISecuriaRepository _repository;
+
+  /// Reloj inyectable para probar horas y duraciones
+  final DateTime Function() _now;
   StreamSubscription<List<IncidentModel>>? _incidentsSubscription;
 
   PatrolBloc({
     required ISecuriaRepository repository,
     required PatrolUnitModel initialPatrol,
+    DateTime Function()? clock,
   }) : _repository = repository,
+       _now = clock ?? DateTime.now,
        super(PatrolState(currentPatrol: initialPatrol)) {
     on<PatrolStarted>(_onStarted);
     on<PatrolIncidentsReceived>(_onIncidentsReceived);
@@ -86,7 +87,15 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
   }
 
   void _onStarted(PatrolStarted event, Emitter<PatrolState> emit) {
-    emit(state.copyWith(currentPatrol: event.unit, isLoading: true));
+    // Una guardia nueva empieza limpia (sin despachos ni alertas descartadas)
+    emit(
+      PatrolState(
+        currentPatrol: event.unit,
+        isLoading: true,
+        radarRadiusKm: event.unit.coverageRadiusKm,
+        shiftStartedAt: _now(),
+      ),
+    );
 
     _incidentsSubscription?.cancel();
     _incidentsSubscription = _repository.watchAllIncidents().listen((
@@ -126,6 +135,7 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
       selectedIncident: dispatchClosedExternally ? null : selected,
       clearSelectedIncident: dispatchClosedExternally || selected == null,
       isSirenActive: dispatchClosedExternally ? false : null,
+      clearDispatchTimes: dispatchClosedExternally,
     );
 
     final alert = _proximityAlertFor(next, incidents);
@@ -225,6 +235,7 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
         activeDispatchedIncident: accepted,
         selectedIncident: accepted,
         clearProximityAlert: true,
+        dispatchAcceptedAt: _now(),
         statusMessage: DispatchStrings.accepted(unit.unitCode),
       ),
     );
@@ -248,7 +259,7 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
       state.copyWith(
         isSirenActive: true,
         activeDispatchedIncident: _latest(event.incident.id),
-        statusMessage: DispatchStrings.onTheWay(unit.unitCode),
+        statusMessage: DispatchStrings.onTheWay,
       ),
     );
   }
@@ -267,10 +278,17 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
       patrolLocation: unit.location,
     );
 
+    final arrivedAt = _now();
+    final acceptedAt = state.dispatchAcceptedAt;
     emit(
       state.copyWith(
         // En el lugar la sirena ya no ayuda: se apaga sola
         isSirenActive: false,
+        dispatchArrivedAt: arrivedAt,
+        arrivalTimes:
+            acceptedAt == null
+                ? null
+                : [...state.arrivalTimes, arrivedAt.difference(acceptedAt)],
         activeDispatchedIncident: _latest(event.incident.id),
         statusMessage: DispatchStrings.arrived,
       ),
@@ -296,6 +314,8 @@ class PatrolBloc extends Bloc<PatrolEvent, PatrolState> {
         clearActiveDispatched: true,
         clearSelectedIncident: true,
         isSirenActive: false,
+        clearDispatchTimes: true,
+        shiftConcludedCount: state.shiftConcludedCount + 1,
         statusMessage: DispatchStrings.concluded,
       ),
     );

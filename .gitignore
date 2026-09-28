@@ -67,3 +67,7 @@ migrate_working_dir/
 
 # Coverage
 **/coverage/
+
+# Claves y secretos locales (copiar .env.example a .env)
+.env
+!.env.example

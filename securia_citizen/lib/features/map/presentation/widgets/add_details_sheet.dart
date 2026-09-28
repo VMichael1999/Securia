@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:securia_core/securia_core.dart';
 import '../../../../app/strings/sos_strings.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_typography.dart';
 import 'incident_report_fields.dart';
 
 /// Datos opcionales que el ciudadano agrega a una alerta ya enviada
@@ -26,7 +28,9 @@ class AddDetailsSheet extends StatefulWidget {
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(SecuriaRadius.sheet),
+        ),
       ),
       builder: (_) => const AddDetailsSheet(),
     );
@@ -63,10 +67,10 @@ class _AddDetailsSheetState extends State<AddDetailsSheet> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
-        12,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
+        SecuriaSpace.lg,
+        SecuriaSpace.sm,
+        SecuriaSpace.lg,
+        MediaQuery.of(context).viewInsets.bottom + SecuriaSpace.lg,
       ),
       child: SafeArea(
         top: false,
@@ -78,30 +82,31 @@ class _AddDetailsSheetState extends State<AddDetailsSheet> {
               title: SosStrings.detailsTitle,
               subtitle: SosStrings.detailsSubtitle,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: SecuriaSpace.md),
             ObservationField(controller: _commentController),
-            const SizedBox(height: 12),
+            const SizedBox(height: SecuriaSpace.sm),
             EvidencePhotoField(
               photoPath: _photoPath,
               onChanged: (path) => setState(() => _photoPath = path),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: SecuriaSpace.md),
             SizedBox(
-              height: 54,
-              child: ElevatedButton(
+              height: 56,
+              child: FilledButton(
                 onPressed:
                     canSend ? () => Navigator.of(context).pop(_details) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGreen,
-                  foregroundColor: AppColors.pureWhite,
-                  disabledBackgroundColor: AppColors.border,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.ink,
+                  foregroundColor: AppColors.onColor,
+                  disabledBackgroundColor: AppColors.surfaceMuted,
+                  disabledForegroundColor: AppColors.inkMuted,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(SecuriaRadius.lg),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   SosStrings.detailsSend,
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                  style: AppTypography.buttonLabel,
                 ),
               ),
             ),

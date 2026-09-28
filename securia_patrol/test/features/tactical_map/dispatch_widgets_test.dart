@@ -94,7 +94,7 @@ void main() {
 
       expect(find.text(IncidentType.asalto.title), findsOneWidget);
       expect(find.text('Av. Javier Prado Este 2100'), findsOneWidget);
-      expect(find.text('Dos sujetos en moto negra'), findsOneWidget);
+      expect(find.text('“Dos sujetos en moto negra”'), findsOneWidget);
       expect(find.text('850 m'), findsOneWidget);
       expect(find.text(DispatchStrings.minutes(2)), findsOneWidget);
     });
@@ -158,9 +158,13 @@ void main() {
 
       expect(find.text(DispatchStrings.incomingTitle), findsOneWidget);
       expect(find.text(IncidentType.asalto.title), findsOneWidget);
-      expect(find.text(DispatchStrings.urgency('Crítica')), findsOneWidget);
+      // La urgencia se lee como palabra, no solo por el color
+      expect(find.text('Crítica'), findsOneWidget);
       expect(find.text('420 m'), findsOneWidget);
 
+      // Deja terminar la animación de entrada
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.tap(find.text(DispatchStrings.incomingAccept));
       await tester.tap(find.text(DispatchStrings.incomingIgnore));
       expect(calls, ['accept', 'ignore']);

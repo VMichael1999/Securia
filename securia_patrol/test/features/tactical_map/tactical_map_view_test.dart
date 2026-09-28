@@ -7,6 +7,7 @@ import 'package:securia_patrol/features/tactical_map/presentation/bloc/patrol_bl
 import 'package:securia_patrol/features/tactical_map/presentation/bloc/patrol_event.dart';
 import 'package:securia_patrol/features/tactical_map/presentation/models/resolution_outcome.dart';
 import 'package:securia_patrol/features/tactical_map/presentation/views/tactical_map_view.dart';
+import 'package:securia_patrol/features/tactical_map/presentation/widgets/resolution_sheet.dart';
 
 import '../../helpers/fake_platform.dart';
 import '../../helpers/pump_app.dart';
@@ -17,9 +18,11 @@ void main() {
 
   setUpAll(mockPlatformPlugins);
 
-  /// Las balizas y la alerta pulsan siempre: pumpAndSettle nunca terminaría
+  /// La alerta actualiza su "hace N s" cada segundo: se avanza a mano
+  /// La alerta entra con una animación corta: se deja terminar antes de tocar
   Future<void> settle(WidgetTester tester) async {
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.pump(const Duration(milliseconds: 600));
   }
 
@@ -81,7 +84,14 @@ void main() {
 
     await tapAndSettle(tester, DispatchStrings.actionConclude);
     await tapAndSettle(tester, ResolutionOutcome.disuelto.label);
-    await tapAndSettle(tester, DispatchStrings.resolveConfirm);
+    // El botón de la hoja tiene el mismo texto que el de la ficha de abajo
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ResolutionSheet),
+        matching: find.text(DispatchStrings.resolveConfirm),
+      ),
+    );
+    await settle(tester);
 
     final resolved = repo.getSnapshotIncidents().firstWhere(
       (i) => i.id == 'inc_today_01',
@@ -104,9 +114,9 @@ void main() {
     tester,
   ) async {
     await pumpMap(tester);
-    await tapAndSettle(tester, DispatchStrings.incomingIgnore);
+    await tester.tap(find.textContaining(DispatchStrings.incomingIgnore));
+    await settle(tester);
 
-    expect(find.text(DispatchStrings.incomingTitle), findsNothing);
     expect(
       repo
           .getSnapshotIncidents()
@@ -114,5 +124,50 @@ void main() {
           .status,
       IncidentStatus.reportado,
     );
+  });
+
+  testWidgets('La alerta dice cuántas más esperan en la cola', (tester) async {
+    await pumpMap(tester);
+    await repo.signInCitizen(
+      dni: InMemorySecuriaRepository.demoDni,
+      phone: InMemorySecuriaRepository.demoPhone,
+    );
+    await repo.createIncident(
+      type: IncidentType.robo,
+      title: IncidentType.robo.title,
+      description: '',
+      location: const GeoLocation(
+        latitude: -12.0870,
+        longitude: -77.0360,
+        address: 'Av. Javier Prado Este, cdra. 21',
+      ),
+      urgency: UrgencyLevel.alta,
+    );
+    await settle(tester);
+    final pending =
+        repo
+            .getSnapshotIncidents()
+            .where((i) => i.status == IncidentStatus.reportado)
+            .length;
+
+    expect(
+      find.text(DispatchStrings.incomingIgnoreQueued(pending - 1)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('La ficha muestra los pasos y la hora estimada de llegada', (
+    tester,
+  ) async {
+    await pumpMap(tester);
+    await tapAndSettle(tester, DispatchStrings.incomingAccept);
+
+    expect(find.text('Aceptado'), findsOneWidget);
+    expect(find.text(DispatchStrings.arrivalTimeLabel), findsOneWidget);
+    expect(find.text(DispatchStrings.sirenOff), findsOneWidget);
+
+    await tapAndSettle(tester, DispatchStrings.actionOnTheWay);
+    // Ir en camino enciende la sirena
+    expect(find.text(DispatchStrings.sirenOn), findsOneWidget);
   });
 }

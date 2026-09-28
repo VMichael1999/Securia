@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../../../app/strings/dispatch_strings.dart';
-import '../../../../app/theme/patrol_colors.dart';
+import '../../../../app/widgets/patrol_buttons.dart';
 import '../models/dispatch_step.dart';
 
 /// Botón principal único de la intervención.
@@ -22,12 +21,12 @@ class DispatchActionButton extends StatelessWidget {
     DispatchStep.accept: (
       DispatchStrings.actionAccept,
       DispatchStrings.actionHintAccept,
-      Icons.flash_on_rounded,
+      Icons.check_rounded,
     ),
     DispatchStep.onTheWay: (
       DispatchStrings.actionOnTheWay,
       DispatchStrings.actionHintOnTheWay,
-      Icons.local_shipping_rounded,
+      Icons.navigation_rounded,
     ),
     DispatchStep.arrived: (
       DispatchStrings.actionArrived,
@@ -47,59 +46,11 @@ class DispatchActionButton extends StatelessWidget {
     if (content == null) return const SizedBox.shrink();
     final (label, hint, icon) = content;
 
-    return SizedBox(
-      width: double.infinity,
-      height: 64,
-      child: ElevatedButton(
-        onPressed: () {
-          HapticFeedback.mediumImpact();
-          onPressed();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: PatrolColors.policeAccent,
-          foregroundColor: PatrolColors.background,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 26),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 17,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  Text(
-                    hint,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11.5,
-                      color: PatrolColors.background.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, size: 26),
-          ],
-        ),
-      ),
+    return PrimaryActionButton(
+      label: label,
+      icon: icon,
+      semanticHint: hint,
+      onPressed: onPressed,
     );
   }
 }

@@ -5,7 +5,7 @@ void main() {
   final repo = InMemorySecuriaRepository.fresh();
   const loc = GeoLocation(latitude: -12.0850, longitude: -77.0360);
 
-  setUpAll(() => repo.signInCitizen(dni: '74829104', phone: '984512893'));
+  setUpAll(() => repo.signInCitizen(dni: '12345678', phone: '900000001'));
 
   test('Cada tipo de reporte define su urgencia por defecto', () {
     expect(IncidentType.emergenciaGeneral.defaultUrgency, UrgencyLevel.critica);

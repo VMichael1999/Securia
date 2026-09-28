@@ -11,6 +11,14 @@ class CitizenProfileModel {
   final String homeAddress;
   final String? avatarUrl;
 
+  /// Cuándo aceptó el tratamiento de sus datos personales (Ley 29733)
+  final DateTime? dataConsentAt;
+
+  /// Cuándo autorizó guardar datos de salud (dato sensible, consentimiento aparte)
+  final DateTime? healthDataConsentAt;
+
+  bool get hasHealthDataConsent => healthDataConsentAt != null;
+
   const CitizenProfileModel({
     required this.id,
     required this.fullName,
@@ -19,9 +27,11 @@ class CitizenProfileModel {
     required this.email,
     required this.emergencyContactName,
     required this.emergencyContactPhone,
-    this.bloodType = 'O+',
-    this.homeAddress = 'Av. Javier Prado Este 2450, San Borja',
+    this.bloodType = '',
+    this.homeAddress = '',
     this.avatarUrl,
+    this.dataConsentAt,
+    this.healthDataConsentAt,
   });
 
   CitizenProfileModel copyWith({
@@ -35,6 +45,8 @@ class CitizenProfileModel {
     String? bloodType,
     String? homeAddress,
     String? avatarUrl,
+    DateTime? dataConsentAt,
+    DateTime? healthDataConsentAt,
   }) {
     return CitizenProfileModel(
       id: id ?? this.id,
@@ -48,6 +60,8 @@ class CitizenProfileModel {
       bloodType: bloodType ?? this.bloodType,
       homeAddress: homeAddress ?? this.homeAddress,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      dataConsentAt: dataConsentAt ?? this.dataConsentAt,
+      healthDataConsentAt: healthDataConsentAt ?? this.healthDataConsentAt,
     );
   }
 
@@ -62,6 +76,8 @@ class CitizenProfileModel {
         'bloodType': bloodType,
         'homeAddress': homeAddress,
         'avatarUrl': avatarUrl,
+        'dataConsentAt': dataConsentAt?.toIso8601String(),
+        'healthDataConsentAt': healthDataConsentAt?.toIso8601String(),
       };
 
   factory CitizenProfileModel.fromJson(Map<String, dynamic> json) =>
@@ -73,8 +89,13 @@ class CitizenProfileModel {
         email: json['email'] as String,
         emergencyContactName: json['emergencyContactName'] as String,
         emergencyContactPhone: json['emergencyContactPhone'] as String,
-        bloodType: json['bloodType'] as String? ?? 'O+',
+        bloodType: json['bloodType'] as String? ?? '',
         homeAddress: json['homeAddress'] as String? ?? '',
         avatarUrl: json['avatarUrl'] as String?,
+        dataConsentAt: _date(json['dataConsentAt']),
+        healthDataConsentAt: _date(json['healthDataConsentAt']),
       );
+
+  static DateTime? _date(Object? value) =>
+      value is String ? DateTime.tryParse(value) : null;
 }

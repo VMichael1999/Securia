@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:securia_core/securia_core.dart';
 import '../../../../app/theme/patrol_colors.dart';
+import '../../../../app/theme/patrol_typography.dart';
 
 /// Aviso breve en la parte superior del mapa.
 ///
@@ -15,51 +17,42 @@ class StatusToast extends StatelessWidget {
     final text = message;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
+      duration: SecuriaMotion.of(context, SecuriaMotion.normal),
       child:
           text == null
               ? const SizedBox.shrink()
-              : Container(
+              : Semantics(
                 key: ValueKey(text),
-                margin: const EdgeInsets.symmetric(horizontal: 14),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: PatrolColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: PatrolColors.policeAccent,
-                    width: 1.2,
+                liveRegion: true,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: SecuriaSpace.md,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: PatrolColors.background.withValues(alpha: 0.5),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline_rounded,
-                      color: PatrolColors.policeAccent,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        text,
-                        style: const TextStyle(
-                          color: PatrolColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13.5,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: SecuriaSpace.md,
+                    vertical: SecuriaSpace.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: PatrolColors.elevated,
+                    borderRadius: BorderRadius.circular(SecuriaRadius.md + 2),
+                    border: Border.all(color: PatrolColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: PatrolColors.inkMuted,
+                        size: 20,
+                      ),
+                      const SizedBox(width: SecuriaSpace.sm - 2),
+                      Expanded(
+                        child: Text(
+                          text,
+                          style: PatrolTypography.label.copyWith(fontSize: 14),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
     );

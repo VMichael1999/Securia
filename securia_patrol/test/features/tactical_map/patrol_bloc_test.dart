@@ -208,4 +208,77 @@ void main() {
       );
     }
   });
+
+  group('Tiempos de la guardia y de la intervención', () {
+    late DateTime now;
+    late PatrolBloc timed;
+
+    setUp(() {
+      now = DateTime(2026, 9, 27, 21, 0);
+      timed = PatrolBloc(
+        repository: repo,
+        initialPatrol: unit,
+        clock: () => now,
+      )..add(PatrolStarted(unit));
+    });
+
+    tearDown(() => timed.close());
+
+    Future<PatrolState> settleTimed() async {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      return timed.state;
+    }
+
+    test('La guardia registra su hora de inicio', () async {
+      final state = await settleTimed();
+      expect(state.shiftStartedAt, DateTime(2026, 9, 27, 21, 0));
+      expect(state.averageArrival, isNull);
+    });
+
+    test('Registra aceptar y llegar, y calcula la llegada promedio', () async {
+      await settleTimed();
+      now = DateTime(2026, 9, 27, 21, 14);
+      timed.add(PatrolAcceptDispatch(incident(seededAlertId)));
+      await settleTimed();
+      timed.add(PatrolEnCamino(incident(seededAlertId)));
+      await settleTimed();
+      now = DateTime(2026, 9, 27, 21, 19);
+      timed.add(PatrolEnLugar(incident(seededAlertId)));
+      var state = await settleTimed();
+
+      expect(state.dispatchAcceptedAt, DateTime(2026, 9, 27, 21, 14));
+      expect(state.dispatchArrivedAt, DateTime(2026, 9, 27, 21, 19));
+      expect(state.averageArrival, const Duration(minutes: 5));
+
+      timed.add(
+        PatrolResolveIncident(
+          incident: incident(seededAlertId),
+          resolutionNote: '[Atendido]',
+        ),
+      );
+      state = await settleTimed();
+
+      // Al concluir se limpian las horas del despacho, pero el promedio queda
+      expect(state.dispatchAcceptedAt, isNull);
+      expect(state.dispatchArrivedAt, isNull);
+      expect(state.averageArrival, const Duration(minutes: 5));
+      // Solo cuenta lo concluido en esta guardia, no el historial de la unidad
+      expect(state.shiftConcludedCount, 1);
+    });
+
+    test(
+      'Una guardia nueva empieza sin despachos ni alertas descartadas',
+      () async {
+        await settleTimed();
+        timed.add(const PatrolDismissProximityAlert(seededAlertId));
+        await settleTimed();
+        expect(timed.state.dismissedAlertIds, contains(seededAlertId));
+
+        timed.add(PatrolStarted(unit));
+        final state = await settleTimed();
+        expect(state.dismissedAlertIds, isEmpty);
+        expect(state.proximityAlertIncident?.id, seededAlertId);
+      },
+    );
+  });
 }

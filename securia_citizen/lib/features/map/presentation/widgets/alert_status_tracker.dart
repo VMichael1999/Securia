@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:securia_core/securia_core.dart';
 import '../../../../app/strings/sos_strings.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 
-/// Panel inferior que reemplaza al botón SOS mientras hay una alerta activa.
+/// Panel que reemplaza al SOS mientras hay una alerta activa.
 ///
-/// Responde de un vistazo las dos preguntas del ciudadano: ¿me escucharon? y
-/// ¿cuánto falta? Deja a mano llamar al 105, agregar detalles o cancelar.
+/// Lo más grande es lo que la persona necesita saber: en cuántos minutos llega
+/// la ayuda. El progreso va en un solo color (verde = la ayuda viene) y
+/// "Cancelar alerta" queda como enlace, visible pero difícil de tocar sin querer.
 class AlertStatusTracker extends StatelessWidget {
   final IncidentModel incident;
   final VoidCallback onTap;
@@ -38,146 +40,160 @@ class AlertStatusTracker extends StatelessWidget {
     SosStrings.stepOnSite,
   ];
 
-  String get _headline {
-    switch (incident.status) {
-      case IncidentStatus.asignado:
-        return SosStrings.trackerAssigned;
-      case IncidentStatus.enCamino:
-        return SosStrings.trackerOnTheWay;
-      case IncidentStatus.enLugar:
-        return SosStrings.trackerOnSite;
-      default:
-        return SosStrings.trackerSearching;
-    }
+  double? get _patrolDistanceKm {
+    final patrol = incident.assignedPatrolLocation;
+    if (patrol == null) return null;
+    return GeoUtils.calculateDistanceKm(patrol, incident.location);
   }
 
-  /// Unidad asignada y, si viene en camino, tiempo estimado de llegada
-  String? get _detail {
+  String get _headline {
+    final km = _patrolDistanceKm;
+    return switch (incident.status) {
+      IncidentStatus.asignado => SosStrings.trackerAssigned,
+      IncidentStatus.enCamino => km == null
+          ? SosStrings.trackerAssigned
+          : SosStrings.trackerArrivesIn(
+              GeoUtils.estimateEtaMinutes(
+                km,
+                averageSpeedKmh: GeoUtils.patrolResponseSpeedKmh,
+              ),
+            ),
+      IncidentStatus.enLugar => SosStrings.trackerOnSite,
+      _ => SosStrings.trackerSearching,
+    };
+  }
+
+  /// "PL-402 · S3 C. Ramírez · a 0.8 km"
+  String? get _unitLine {
     final unit = incident.assignedPatrolCode;
     if (unit == null) return null;
-
-    final patrolLocation = incident.assignedPatrolLocation;
-    if (incident.status == IncidentStatus.enCamino && patrolLocation != null) {
-      final km = GeoUtils.calculateDistanceKm(
-        patrolLocation,
-        incident.location,
-      );
-      final eta = GeoUtils.estimateEtaMinutes(
-        km,
-        averageSpeedKmh: GeoUtils.patrolResponseSpeedKmh,
-      );
-      return '$unit · ${SosStrings.trackerEta(eta)}';
+    final officer = incident.assignedOfficerName ?? '';
+    final km = _patrolDistanceKm;
+    if (km == null || incident.status == IncidentStatus.enLugar) {
+      return SosStrings.trackerUnitNoDistance(unit, officer);
     }
-    return '${SosStrings.trackerUnit} $unit';
+    return SosStrings.trackerUnit(unit, officer, GeoUtils.formatDistance(km));
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentStep = _steps
-        .indexOf(incident.status)
-        .clamp(0, _steps.length - 1);
+    final currentStep =
+        _steps.indexOf(incident.status).clamp(0, _steps.length - 1);
+    final since = DateFormat('HH:mm').format(incident.timestamp);
+    final unitLine = _unitLine;
     final isSearching = incident.status == IncidentStatus.reportado;
-    final accent =
-        isSearching ? AppColors.emergencyRed : AppColors.primaryGreen;
-    final detail = _detail;
 
     return Material(
       color: AppColors.surface,
-      elevation: 12,
-      shadowColor: AppColors.primaryNavy.withValues(alpha: 0.25),
-      borderRadius: BorderRadius.circular(24),
+      elevation: 8,
+      shadowColor: AppColors.ink.withValues(alpha: 0.25),
+      borderRadius: BorderRadius.circular(SecuriaRadius.xl),
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(SecuriaRadius.xl),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+          padding: const EdgeInsets.fromLTRB(
+            SecuriaSpace.lg,
+            SecuriaSpace.md,
+            SecuriaSpace.lg,
+            SecuriaSpace.xs,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Tu alerta: el único rojo de la pantalla mientras está activa
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: AppColors.sos,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      isSearching
-                          ? Icons.cell_tower_rounded
-                          : Icons.local_police_rounded,
-                      color: accent,
-                      size: 24,
-                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: SecuriaSpace.xs),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _headline,
-                          style: AppTypography.titleMedium.copyWith(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 17,
-                          ),
-                        ),
-                        if (detail != null)
-                          Text(
-                            detail,
-                            style: const TextStyle(
-                              color: AppColors.primaryGreen,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                      ],
+                    child: Text(
+                      SosStrings.activeSince(since),
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.sos,
+                      ),
                     ),
                   ),
-                  _TypeChip(type: incident.type),
                 ],
               ),
-              const SizedBox(height: 14),
-              AlertProgressSteps(
-                labels: _stepLabels,
-                currentIndex: currentStep,
+              const SizedBox(height: SecuriaSpace.sm),
+              AlertProgressSteps(labels: _stepLabels, currentIndex: currentStep),
+              const SizedBox(height: SecuriaSpace.md),
+              Semantics(
+                liveRegion: true,
+                child: AnimatedSwitcher(
+                  duration: SecuriaMotion.of(context, SecuriaMotion.normal),
+                  child: Text(
+                    _headline,
+                    key: ValueKey(_headline),
+                    style: AppTypography.headline.copyWith(
+                      color: isSearching ? AppColors.ink : AppColors.help,
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 14),
+              if (unitLine != null) ...[
+                const SizedBox(height: SecuriaSpace.xxs),
+                Text(unitLine, style: AppTypography.mono(size: 14)),
+              ],
+              const SizedBox(height: SecuriaSpace.xs),
+              Row(
+                children: [
+                  Icon(incident.type.icon, size: 16, color: AppColors.inkSecondary),
+                  const SizedBox(width: SecuriaSpace.xxs),
+                  Expanded(
+                    child: Text(
+                      incident.type.title,
+                      style: AppTypography.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: SecuriaSpace.md),
               Row(
                 children: [
                   Expanded(
-                    flex: 3,
                     child: _TrackerButton(
                       label: SosStrings.call105,
-                      icon: Icons.phone_rounded,
-                      background: AppColors.primaryNavy,
-                      foreground: AppColors.pureWhite,
+                      icon: Icons.call_rounded,
+                      filled: true,
                       onPressed: onCall,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: SecuriaSpace.xs),
                   Expanded(
-                    flex: 3,
                     child: _TrackerButton(
                       label: SosStrings.addDetails,
                       icon: Icons.add_a_photo_outlined,
-                      background: AppColors.primaryGreenLight,
-                      foreground: AppColors.primaryGreen,
+                      filled: false,
                       onPressed: onAddDetails,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: _TrackerButton(
-                      label: SosStrings.cancelAlert,
-                      background: AppColors.surfaceMuted,
-                      foreground: AppColors.textSecondary,
-                      onPressed: onCancel,
+                ],
+              ),
+              Center(
+                child: TextButton(
+                  onPressed: onCancel,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.inkSecondary,
+                    minimumSize: const Size(SecuriaTouch.min, SecuriaTouch.min),
+                  ),
+                  child: Text(
+                    SosStrings.cancelAlert,
+                    style: AppTypography.bodySmall.copyWith(
+                      decoration: TextDecoration.underline,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -187,7 +203,7 @@ class AlertStatusTracker extends StatelessWidget {
   }
 }
 
-/// Barra de progreso por pasos con etiqueta bajo cada segmento
+/// Pasos de la alerta en un solo color, con el texto de cada uno
 class AlertProgressSteps extends StatelessWidget {
   final List<String> labels;
   final int currentIndex;
@@ -200,74 +216,40 @@ class AlertProgressSteps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < labels.length; i++) ...[
-          if (i > 0) const SizedBox(width: 6),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color:
-                        i <= currentIndex
-                            ? AppColors.primaryGreen
-                            : AppColors.border,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  labels[i],
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight:
-                        i == currentIndex ? FontWeight.w800 : FontWeight.w600,
-                    color:
-                        i <= currentIndex
-                            ? AppColors.textPrimary
-                            : AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _TypeChip extends StatelessWidget {
-  final IncidentType type;
-  const _TypeChip({required this.type});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: type.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return Semantics(
+      label: '${labels[currentIndex]}, paso ${currentIndex + 1} de ${labels.length}',
+      excludeSemantics: true,
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(type.icon, size: 14, color: type.color),
-          const SizedBox(width: 4),
-          Text(
-            type.shortLabel,
-            style: TextStyle(
-              color: type.color,
-              fontWeight: FontWeight.w800,
-              fontSize: 11.5,
+          for (var i = 0; i < labels.length; i++) ...[
+            if (i > 0) const SizedBox(width: SecuriaSpace.xxs + 2),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedContainer(
+                    duration: SecuriaMotion.of(context, SecuriaMotion.normal),
+                    curve: SecuriaMotion.standard,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: i <= currentIndex ? AppColors.help : AppColors.border,
+                      borderRadius: BorderRadius.circular(SecuriaRadius.pill),
+                    ),
+                  ),
+                  const SizedBox(height: SecuriaSpace.xxs),
+                  Text(
+                    labels[i],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption.copyWith(
+                      color: i <= currentIndex ? AppColors.ink : AppColors.inkMuted,
+                      fontWeight: i == currentIndex ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -276,55 +258,59 @@ class _TypeChip extends StatelessWidget {
 
 class _TrackerButton extends StatelessWidget {
   final String label;
-  final IconData? icon;
-  final Color background;
-  final Color foreground;
+  final IconData icon;
+  final bool filled;
   final VoidCallback onPressed;
 
   const _TrackerButton({
     required this.label,
-    this.icon,
-    required this.background,
-    required this.foreground,
+    required this.icon,
+    required this.filled,
     required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(
-          backgroundColor: background,
-          foregroundColor: foreground,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(SecuriaRadius.md),
+    );
+    final child = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: SecuriaSpace.xs),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.buttonLabel,
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 18),
-              const SizedBox(width: 6),
-            ],
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
+      ],
+    );
+
+    return SizedBox(
+      height: 52,
+      child: filled
+          ? FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.ink,
+                foregroundColor: AppColors.onColor,
+                shape: shape,
               ),
+              child: child,
+            )
+          : OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.ink,
+                side: const BorderSide(color: AppColors.borderStrong),
+                shape: shape,
+              ),
+              child: child,
             ),
-          ],
-        ),
-      ),
     );
   }
 }

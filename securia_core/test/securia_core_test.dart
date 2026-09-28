@@ -22,7 +22,7 @@ void main() {
       'InMemorySecuriaRepository handles incident creation and status changes',
       () async {
         final repo = InMemorySecuriaRepository();
-      await repo.signInCitizen(dni: '74829104', phone: '984512893');
+      await repo.signInCitizen(dni: '12345678', phone: '900000001');
         final initialIncidents = repo.getSnapshotIncidents();
         expect(initialIncidents, isNotEmpty);
 

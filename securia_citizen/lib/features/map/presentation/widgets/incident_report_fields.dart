@@ -31,7 +31,8 @@ class IncidentTypeGrid extends StatelessWidget {
         crossAxisCount: types.length > 6 ? 4 : 3,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        mainAxisExtent: _tileHeight,
+        // Crece con el tamaño de texto del sistema (hasta 150 %)
+        mainAxisExtent: MediaQuery.textScalerOf(context).scale(_tileHeight),
       ),
       children: [
         for (final type in types)
@@ -45,7 +46,10 @@ class IncidentTypeGrid extends StatelessWidget {
   }
 }
 
-/// Mosaico grande y táctil de un tipo de incidente (ícono + etiqueta corta)
+/// Mosaico grande y táctil de un tipo de incidente.
+///
+/// En azul neutro con un ícono distinto por tipo: el ciudadano no ve colores
+/// de urgencia, que asigna el sistema según el tipo.
 class IncidentTypeTile extends StatelessWidget {
   final IncidentType type;
   final VoidCallback onTap;
@@ -60,52 +64,56 @@ class IncidentTypeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: type.color.withValues(alpha: selected ? 0.18 : 0.08),
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: selected ? type.color : type.color.withValues(alpha: 0.25),
-              width: selected ? 2.5 : 1,
+    final radius = BorderRadius.circular(SecuriaRadius.lg);
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: type.title,
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? AppColors.ink : AppColors.surface,
+        borderRadius: radius,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: selected ? AppColors.ink : AppColors.border,
+                width: selected ? 2 : 1,
+              ),
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: type.color,
-                  shape: BoxShape.circle,
+            padding: const EdgeInsets.symmetric(
+              horizontal: SecuriaSpace.xxs,
+              vertical: SecuriaSpace.xs,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  type.icon,
+                  size: 28,
+                  color: selected ? AppColors.onColor : AppColors.incident,
                 ),
-                child: Icon(
-                  selected ? Icons.check_rounded : type.icon,
-                  color: AppColors.pureWhite,
-                  size: 24,
+                const SizedBox(height: SecuriaSpace.xs),
+                Text(
+                  type.shortLabel,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption.copyWith(
+                    color: selected ? AppColors.onColor : AppColors.ink,
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                type.shortLabel,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                  fontSize: 12.5,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -128,12 +136,13 @@ class ObservationField extends StatelessWidget {
       textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
         hintText: SosStrings.detailsHint,
-        hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+        hintStyle: AppTypography.bodySmall.copyWith(color: AppColors.inkMuted),
+        counterText: '',
         filled: true,
         fillColor: AppColors.surfaceMuted,
-        contentPadding: const EdgeInsets.all(14),
+        contentPadding: const EdgeInsets.all(SecuriaSpace.md),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(SecuriaRadius.md),
           borderSide: BorderSide.none,
         ),
       ),
@@ -211,18 +220,14 @@ class _PhotoButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlinedButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, color: AppColors.primaryNavy),
-      label: Text(
-        label,
-        style: const TextStyle(
-          color: AppColors.primaryNavy,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+      icon: Icon(icon, color: AppColors.ink),
+      label: Text(label, style: AppTypography.label),
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        minimumSize: const Size.fromHeight(SecuriaTouch.min + 4),
         side: const BorderSide(color: AppColors.border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SecuriaRadius.md),
+        ),
       ),
     );
   }
@@ -239,44 +244,42 @@ class _AttachedPhoto extends StatelessWidget {
     final isSimulated = path == SosStrings.simulatedPhoto;
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(SecuriaSpace.xs),
       decoration: BoxDecoration(
-        color: AppColors.primaryGreenLight,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.helpSoft,
+        borderRadius: BorderRadius.circular(SecuriaRadius.md),
       ),
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(SecuriaRadius.sm),
             child: SizedBox(
               width: 48,
               height: 48,
               child:
                   isSimulated
                       ? const ColoredBox(
-                        color: AppColors.primaryNavy,
+                        color: AppColors.ink,
                         child: Icon(
                           Icons.photo_camera_back_rounded,
-                          color: AppColors.pureWhite,
+                          color: AppColors.onColor,
                         ),
                       )
                       : Image.file(File(path), fit: BoxFit.cover),
             ),
           ),
-          const SizedBox(width: 12),
-          const Expanded(
+          const SizedBox(width: SecuriaSpace.sm),
+          Expanded(
             child: Text(
               SosStrings.detailsPhotoAttached,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.primaryGreen,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.help),
             ),
           ),
           IconButton(
+            tooltip: SosStrings.detailsRemovePhoto,
             icon: const Icon(
               Icons.close_rounded,
-              color: AppColors.textSecondary,
+              color: AppColors.inkSecondary,
             ),
             onPressed: onRemove,
           ),
@@ -309,7 +312,7 @@ class SheetHeader extends StatelessWidget {
             width: 44,
             height: 4.5,
             decoration: BoxDecoration(
-              color: AppColors.borderSubtle,
+              color: AppColors.borderStrong,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -324,7 +327,7 @@ class SheetHeader extends StatelessWidget {
         Text(
           subtitle,
           style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: AppColors.inkSecondary,
           ),
         ),
       ],

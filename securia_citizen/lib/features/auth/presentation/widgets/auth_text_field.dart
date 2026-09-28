@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:securia_core/securia_core.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_typography.dart';
 
 /// Campo de formulario de acceso: etiqueta arriba, ícono y mensaje de error
 class AuthTextField extends StatelessWidget {
@@ -32,45 +34,40 @@ class AuthTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(SecuriaRadius.md),
       borderSide: const BorderSide(color: AppColors.border),
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 6),
+        Text(label, style: AppTypography.label),
+        const SizedBox(height: SecuriaSpace.xxs + 2),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
           maxLength: maxLength,
           textInputAction: textInputAction,
           textCapitalization: textCapitalization,
+          style: AppTypography.bodyLarge,
           inputFormatters:
               digitsOnly ? [FilteringTextInputFormatter.digitsOnly] : null,
           decoration: InputDecoration(
             counterText: '',
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textMuted),
+            hintStyle: AppTypography.bodyLarge.copyWith(color: AppColors.inkMuted),
             errorText: errorText,
-            prefixIcon: Icon(icon, color: AppColors.primaryNavy),
+            errorStyle: AppTypography.caption.copyWith(color: AppColors.sos),
+            prefixIcon: Icon(icon, color: AppColors.ink),
             filled: true,
-            fillColor: AppColors.surfaceMuted,
+            fillColor: AppColors.surface,
             border: border,
             enabledBorder: border,
             focusedBorder: border.copyWith(
-              borderSide: const BorderSide(
-                color: AppColors.primaryGreen,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: AppColors.ink, width: 2),
+            ),
+            errorBorder: border.copyWith(
+              borderSide: const BorderSide(color: AppColors.sos, width: 1.5),
             ),
           ),
         ),

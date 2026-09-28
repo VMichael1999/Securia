@@ -3,12 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:securia_core/securia_core.dart';
 
-/// Simula la plataforma para pantallas con mapa y tipografía remota:
-/// - `path_provider`, que usa el caché de tiles de flutter_map
-/// - red sin respuesta, para que google_fonts no falle al descargar fuentes
-///   (en tests se usa la fuente por defecto)
+/// Simula la plataforma para pantallas con mapa:
+/// - Google Maps no existe en pruebas: se dibuja el mapa falso de SecuriaMap
+/// - `path_provider` y red sin respuesta, por si algún plugin los pide
 void mockPlatformPlugins() {
+  SecuriaMap.debugUseFakeMap = true;
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
         const MethodChannel('plugins.flutter.io/path_provider'),

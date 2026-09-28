@@ -16,11 +16,11 @@ void main() {
 
   test('Inicia sesión con DNI y celular sin importar espacios', () async {
     final citizen = await repo.signInCitizen(
-      dni: '74829104',
-      phone: '984512893',
+      dni: '12345678',
+      phone: '900000001',
     );
 
-    expect(citizen.fullName, contains('Michael'));
+    expect(citizen.fullName, contains('Ana Lucía'));
     expect(repo.getCurrentCitizen()?.id, citizen.id);
   });
 
@@ -33,7 +33,7 @@ void main() {
 
   test('Rechaza un celular que no coincide con el DNI', () {
     expect(
-      repo.signInCitizen(dni: '74829104', phone: '911111111'),
+      repo.signInCitizen(dni: '12345678', phone: '911111111'),
       throwsA(authError(CitizenAuthError.phoneMismatch)),
     );
   });
@@ -45,6 +45,7 @@ void main() {
         fullName: 'Rosa Quispe',
         dni: '45678912',
         phone: '987 654 321',
+        dataConsentAt: DateTime(2026, 9, 27),
       );
       expect(repo.getCurrentCitizen()?.id, nuevo.id);
 
@@ -63,8 +64,9 @@ void main() {
     expect(
       repo.registerCitizen(
         fullName: 'Otro',
-        dni: '74829104',
+        dni: '12345678',
         phone: '900000000',
+        dataConsentAt: DateTime(2026, 9, 27),
       ),
       throwsA(authError(CitizenAuthError.alreadyRegistered)),
     );
@@ -75,6 +77,7 @@ void main() {
       fullName: 'Rosa Quispe',
       dni: '45678912',
       phone: '987654321',
+      dataConsentAt: DateTime(2026, 9, 27),
     );
     final incident = await repo.createIncident(
       type: IncidentType.robo,
@@ -86,6 +89,27 @@ void main() {
 
     expect(incident.citizenId, rosa.id);
     expect(incident.citizenName, 'Rosa Quispe');
+  });
+
+  test('El consentimiento de datos queda registrado; el de salud es aparte', () async {
+    final consent = DateTime(2026, 9, 27, 10);
+    final sinSalud = await repo.registerCitizen(
+      fullName: 'Rosa Quispe',
+      dni: '45678912',
+      phone: '987654321',
+      dataConsentAt: consent,
+    );
+    expect(sinSalud.dataConsentAt, consent);
+    expect(sinSalud.hasHealthDataConsent, isFalse);
+
+    final conSalud = await repo.registerCitizen(
+      fullName: 'Luis Soto',
+      dni: '45678913',
+      phone: '987654322',
+      dataConsentAt: consent,
+      healthDataConsentAt: consent,
+    );
+    expect(conSalud.hasHealthDataConsent, isTrue);
   });
 
   test('Sin sesión no se puede reportar', () {

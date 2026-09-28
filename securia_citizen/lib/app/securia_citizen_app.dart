@@ -1,46 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:securia_core/securia_core.dart';
 import 'theme/app_colors.dart';
+import 'theme/app_typography.dart';
 import '../features/auth/presentation/views/citizen_login_view.dart';
 
 /// Aplicación principal de Securia Ciudadano
 class SecuriaCitizenApp extends StatelessWidget {
   const SecuriaCitizenApp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Securia - Seguridad Ciudadana',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
+  static ThemeData get theme => ThemeData(
         useMaterial3: true,
+        fontFamily: SecuriaFonts.sans,
+        package: SecuriaFonts.package,
         scaffoldBackgroundColor: AppColors.background,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primaryNavy,
-          primary: AppColors.primaryNavy,
-          secondary: AppColors.accentBlue,
-          error: AppColors.emergencyRed,
-          surface: Colors.white,
+        textTheme: AppTypography.textTheme,
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.ink,
+          onPrimary: AppColors.onColor,
+          secondary: AppColors.help,
+          onSecondary: AppColors.onColor,
+          error: AppColors.sos,
+          onError: AppColors.onColor,
+          surface: AppColors.surface,
+          onSurface: AppColors.ink,
+          outline: AppColors.borderStrong,
         ),
         snackBarTheme: SnackBarThemeData(
-          backgroundColor: AppColors.primaryNavy,
-          contentTextStyle: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 13.5,
+          backgroundColor: AppColors.ink,
+          contentTextStyle: AppTypography.bodyMedium.copyWith(
+            color: AppColors.onColor,
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: Color(0xFF334155), width: 1),
+            borderRadius: BorderRadius.circular(SecuriaRadius.md),
           ),
         ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: AppColors.primaryNavy,
-          elevation: 0,
-          centerTitle: true,
+        dialogTheme: DialogThemeData(
+          backgroundColor: AppColors.surface,
+          titleTextStyle: AppTypography.titleLarge,
+          contentTextStyle: AppTypography.bodyMedium,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(SecuriaRadius.xl),
+          ),
         ),
-      ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: AppColors.background,
+          foregroundColor: AppColors.ink,
+          surfaceTintColor: AppColors.background,
+          elevation: 0,
+          titleTextStyle: AppTypography.titleMedium,
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Securia',
+      debugShowCheckedModeBanner: false,
+      theme: theme,
       home: const CitizenLoginView(),
     );
   }
