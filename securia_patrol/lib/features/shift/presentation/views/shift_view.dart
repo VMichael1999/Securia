@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +8,6 @@ import '../../../../app/theme/patrol_colors.dart';
 import '../../../../app/theme/patrol_typography.dart';
 import '../../../../app/widgets/patrol_buttons.dart';
 import '../../../auth/presentation/views/patrol_login_view.dart';
-import '../../../catalog/presentation/views/component_catalog_view.dart';
 import '../../../tactical_map/presentation/bloc/patrol_bloc.dart';
 import '../../../tactical_map/presentation/bloc/patrol_event.dart';
 import '../../../tactical_map/presentation/bloc/patrol_state.dart';
@@ -176,22 +174,6 @@ class ShiftView extends StatelessWidget {
                     ShiftStrings.endShiftLocked,
                     textAlign: TextAlign.center,
                     style: PatrolTypography.bodySmall,
-                  ),
-                ],
-                if (kDebugMode) ...[
-                  const SizedBox(height: SecuriaSpace.md),
-                  TextButton(
-                    onPressed:
-                        () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ComponentCatalogView(),
-                          ),
-                        ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: PatrolColors.inkMuted,
-                      minimumSize: const Size.fromHeight(SecuriaTouch.min),
-                    ),
-                    child: const Text(ShiftStrings.catalog),
                   ),
                 ],
               ],
